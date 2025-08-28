@@ -1,5 +1,5 @@
 # Development environment configuration
-# Uses local database with hardcoded credentials (safe for development)
+# Standard Spring Boot configuration pattern
 
 server:
   port: 8081
@@ -10,15 +10,15 @@ spring:
   devtools:
     add-properties: false
 
-# Development database - local Docker instance
+# Development database - hardcoded values (safe for development)
 adapters:
   r2dbc:
-    host: ${DB_HOST:localhost}
-    port: ${DB_PORT:5433}
-    database: ${DB_NAME:mydatabase}
-    schema: ${DB_SCHEMA:public}
-    username: ${DB_USERNAME:myuser}
-    password: ${DB_PASSWORD:secret}
+    host: localhost
+    port: 5433
+    database: mydatabase
+    schema: public
+    username: myuser
+    password: secret
 
 # Disable AWS secrets for development
 aws:

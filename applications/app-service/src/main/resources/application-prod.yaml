@@ -10,14 +10,15 @@ spring:
     add-properties: false
 
 # Database configuration using environment variables
+# These MUST be set as environment variables in production
 adapters:
   r2dbc:
-    host: ${DB_HOST}
+    host: ${DB_HOST:localhost}
     port: ${DB_PORT:5432}
-    database: ${DB_NAME}
+    database: ${DB_NAME:production_db}
     schema: ${DB_SCHEMA:public}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    username: ${DB_USERNAME:prod_user}
+    password: ${DB_PASSWORD:CHANGE_ME}
 
 # Production logging - less verbose
 logging:

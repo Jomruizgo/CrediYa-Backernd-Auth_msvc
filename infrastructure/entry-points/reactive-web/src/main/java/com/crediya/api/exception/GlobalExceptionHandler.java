@@ -11,9 +11,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.support.WebExchangeBindException;
 import reactor.core.publisher.Mono;
+import jakarta.validation.ConstraintViolationException;
 
 import java.time.LocalDateTime;
+import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -57,6 +60,40 @@ public class GlobalExceptionHandler {
         );
         
         return Mono.just(ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse));
+    }
+
+    @ExceptionHandler(WebExchangeBindException.class)
+    public Mono<ResponseEntity<ExceptionResponse>> handleValidationException(WebExchangeBindException ex) {
+        logger.error("Validation error: {}", ex.getMessage(), ex);
+        
+        String validationErrors = ex.getBindingResult().getFieldErrors().stream()
+            .map(error -> error.getField() + ": " + error.getDefaultMessage())
+            .collect(Collectors.joining(", "));
+        
+        ExceptionResponse errorResponse = new ExceptionResponse(
+            "Validation failed: " + validationErrors,
+            ErrorConstants.VALIDATION_ERROR,
+            LocalDateTime.now()
+        );
+        
+        return Mono.just(ResponseEntity.badRequest().body(errorResponse));
+    }
+    
+    @ExceptionHandler(ConstraintViolationException.class)
+    public Mono<ResponseEntity<ExceptionResponse>> handleConstraintViolationException(ConstraintViolationException ex) {
+        logger.error("Constraint violation: {}", ex.getMessage(), ex);
+        
+        String constraintErrors = ex.getConstraintViolations().stream()
+            .map(violation -> violation.getPropertyPath() + ": " + violation.getMessage())
+            .collect(Collectors.joining(", "));
+        
+        ExceptionResponse errorResponse = new ExceptionResponse(
+            "Validation failed: " + constraintErrors,
+            ErrorConstants.VALIDATION_ERROR,
+            LocalDateTime.now()
+        );
+        
+        return Mono.just(ResponseEntity.badRequest().body(errorResponse));
     }
 
     @ExceptionHandler(Exception.class)

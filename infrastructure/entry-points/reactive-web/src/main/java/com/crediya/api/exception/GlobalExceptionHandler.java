@@ -12,10 +12,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.bind.support.WebExchangeBindException;
+import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 import jakarta.validation.ConstraintViolationException;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
@@ -25,7 +27,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(InvalidUserDataException.class)
     public Mono<ResponseEntity<ExceptionResponse>> handleInvalidUserDataException(InvalidUserDataException ex) {
-        logger.error("User data validation error: {}", ex.getMessage(), ex);
+        logger.error("User data validation error: {} at {}", ex.getMessage(), ex.getStackTrace()[0]);
         
         ExceptionResponse errorResponse = new ExceptionResponse(
             ex.getMessage(),
@@ -38,7 +40,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(UserNotFoundException.class)
     public Mono<ResponseEntity<ExceptionResponse>> handleUserNotFoundException(UserNotFoundException ex) {
-        logger.error("User not found: {}", ex.getMessage(), ex);
+        logger.error("User not found: {} at {}", ex.getMessage(), ex.getStackTrace()[0]);
         
         ExceptionResponse errorResponse = new ExceptionResponse(
             ex.getMessage(),
@@ -50,8 +52,9 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(UserAlreadyExistsException.class)
-    public Mono<ResponseEntity<ExceptionResponse>> handleUserAlreadyExistsException(UserAlreadyExistsException ex) {
-        logger.error("User already exists: {}", ex.getMessage(), ex);
+    public Mono<ResponseEntity<ExceptionResponse>> handleUserAlreadyExistsException(UserAlreadyExistsException ex, ServerWebExchange exchange) {
+        String correlationId = getCorrelationId(exchange);
+        logger.error("[CREDIYA-{}] User already exists: {} at {}", correlationId, ex.getMessage(), ex.getStackTrace()[0]);
         
         ExceptionResponse errorResponse = new ExceptionResponse(
             ex.getMessage(),
@@ -64,7 +67,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(WebExchangeBindException.class)
     public Mono<ResponseEntity<ExceptionResponse>> handleValidationException(WebExchangeBindException ex) {
-        logger.error("Validation error: {}", ex.getMessage(), ex);
+        logger.error("Validation error: {} at {}", ex.getMessage(), ex.getStackTrace()[0]);
         
         String validationErrors = ex.getBindingResult().getFieldErrors().stream()
             .map(error -> error.getField() + ": " + error.getDefaultMessage())
@@ -81,7 +84,7 @@ public class GlobalExceptionHandler {
     
     @ExceptionHandler(ConstraintViolationException.class)
     public Mono<ResponseEntity<ExceptionResponse>> handleConstraintViolationException(ConstraintViolationException ex) {
-        logger.error("Constraint violation: {}", ex.getMessage(), ex);
+        logger.error("Constraint violation: {} at {}", ex.getMessage(), ex.getStackTrace()[0]);
         
         String constraintErrors = ex.getConstraintViolations().stream()
             .map(violation -> violation.getPropertyPath() + ": " + violation.getMessage())
@@ -97,8 +100,9 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public Mono<ResponseEntity<ExceptionResponse>> handleGenericException(Exception ex) {
-        logger.error("Unexpected error occurred", ex);
+    public Mono<ResponseEntity<ExceptionResponse>> handleGenericException(Exception ex, ServerWebExchange exchange) {
+        String correlationId = getCorrelationId(exchange);
+        logger.error("[CREDIYA-{}] Unexpected error occurred: {} at {}", correlationId, ex.getMessage(), ex.getStackTrace()[0]);
         
         ExceptionResponse errorResponse = new ExceptionResponse(
             ErrorConstants.UNEXPECTED_ERROR,
@@ -107,5 +111,13 @@ public class GlobalExceptionHandler {
         );
         
         return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse));
+    }
+    
+    private String getCorrelationId(ServerWebExchange exchange) {
+        String correlationId = exchange.getRequest().getHeaders().getFirst("X-Correlation-ID");
+        if (correlationId == null || correlationId.isEmpty()) {
+            correlationId = UUID.randomUUID().toString().substring(0, 8);
+        }
+        return correlationId;
     }
 }

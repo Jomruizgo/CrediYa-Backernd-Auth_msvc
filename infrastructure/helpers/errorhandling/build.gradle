@@ -1,0 +1,3 @@
+dependencies {
+    // No dependencies needed - only POJOs and constants
+}

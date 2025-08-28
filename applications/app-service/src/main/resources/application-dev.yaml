@@ -1,0 +1,55 @@
+# Development environment configuration
+# Uses local database with hardcoded credentials (safe for development)
+
+server:
+  port: 8081
+
+spring:
+  application:
+    name: "Auth-Dev"
+  devtools:
+    add-properties: false
+
+# Development database - local Docker instance
+adapters:
+  r2dbc:
+    host: ${DB_HOST:localhost}
+    port: ${DB_PORT:5433}
+    database: ${DB_NAME:mydatabase}
+    schema: ${DB_SCHEMA:public}
+    username: ${DB_USERNAME:myuser}
+    password: ${DB_PASSWORD:secret}
+
+# Disable AWS secrets for development
+aws:
+  enabled: false
+
+logging:
+  level:
+    io.r2dbc.postgresql: DEBUG
+    org.springframework.data.r2dbc: DEBUG
+    co.com.bancolombia.secretsmanager: DEBUG
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    try-it-out-enabled: true
+    filter: true
+  show-actuator: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,prometheus,info"
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+cors:
+  allowed-origins: "http://localhost:4200,http://localhost:8080,http://localhost:8081"

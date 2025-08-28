@@ -1,0 +1,24 @@
+# Docker Compose for local development
+# Only includes PostgreSQL database - run the application locally with ./gradlew bootRun
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: auth-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-mydatabase}
+      POSTGRES_USER: ${DB_USERNAME:-myuser}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+    ports:
+      - "${DB_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../applications/app-service/src/main/resources/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-myuser} -d ${DB_NAME:-mydatabase}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

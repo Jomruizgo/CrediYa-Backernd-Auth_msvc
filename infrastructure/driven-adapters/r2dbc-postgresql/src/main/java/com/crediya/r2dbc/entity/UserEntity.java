@@ -27,6 +27,9 @@ public class UserEntity {
     @Column("last_name")
     private String lastName;
     
+    @Column("document_id")
+    private String documentId;
+    
     @Column("birth_date")
     private LocalDate birthDate;
     

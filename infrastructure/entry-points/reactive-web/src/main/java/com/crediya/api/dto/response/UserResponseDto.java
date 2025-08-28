@@ -8,6 +8,7 @@ public record UserResponseDto(
     Long id,
     String name,
     String lastName,
+    String documentId,
     LocalDate birthDate,
     String address,
     String phoneNumber,

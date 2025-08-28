@@ -15,11 +15,14 @@ public class Constant {
 
     // Error Messages
     public static final String USER_ALREADY_EXISTS = "User with email %s already exists";
+    public static final String USER_DOCUMENT_ALREADY_EXISTS = "Document ID %s is already registered by another user";
     public static final String USER_NOT_FOUND_BY_ID = "User with ID %s not found";
     public static final String USER_NOT_FOUND_BY_EMAIL = "User with email %s not found";
+    public static final String USER_NOT_FOUND_BY_DOCUMENT_ID = "User with document ID %s not found";
     public static final String INVALID_REQUIRED_FIELDS = "Name, lastName, email and baseSalary are required fields";
     public static final String INVALID_SALARY_RANGE = "Base salary must be between 0 and 15,000,000";
     public static final String INVALID_EMAIL_DUPLICATE = "Email is already registered by another user";
+    public static final String INVALID_DOCUMENT_ID_DUPLICATE = "Document ID is already registered by another user";
     public static final String INVALID_USER_DATA = "Invalid user data";
     public static final String INVALID_ID = "ID cannot be null";
     public static final String INVALID_EMAIL = "Email cannot be null or empty";

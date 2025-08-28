@@ -29,6 +29,7 @@ public class UserUseCase implements IUserService {
                 .flatMap(this::validateEmailFormat)
                 .flatMap(this::validateSalaryRange)
                 .flatMap(validUser -> validateEmailNotExists(validUser.getEmail())
+                        .then(validateDocumentIdNotExists(validUser.getDocumentId()))
                         .then(Mono.just(validUser)))
                 .flatMap(userPersistencePort::save);
     }
@@ -63,11 +64,13 @@ public class UserUseCase implements IUserService {
                 .flatMap(this::validateEmailFormat)
                 .flatMap(this::validateSalaryRange)
                 .flatMap(validUser -> validateEmailNotExistsForUpdate(validUser.getEmail(), id)
+                        .then(validateDocumentIdNotExistsForUpdate(validUser.getDocumentId(), id))
                         .then(Mono.just(validUser)))
                 .map(validUser -> new User(
                         id, 
                         validUser.getName(), 
                         validUser.getLastName(), 
+                        validUser.getDocumentId(),
                         validUser.getBirthDate(),
                         validUser.getAddress(), 
                         validUser.getPhoneNumber(), 
@@ -135,6 +138,29 @@ public class UserUseCase implements IUserService {
         return userPersistencePort.findByEmail(email)
                 .filter(existingUser -> !existingUser.getId().equals(currentUserId))
                 .flatMap(existingUser -> Mono.error(new UserAlreadyExistsException(email)))
+                .then();
+    }
+
+    private Mono<Void> validateDocumentIdNotExists(String documentId) {
+        // Si documentId es null o vacío, no validamos (es opcional)
+        if (isNullOrEmpty(documentId)) {
+            return Mono.empty();
+        }
+        
+        return userPersistencePort.findByDocumentId(documentId.trim())
+                .flatMap(existingUser -> Mono.error(UserAlreadyExistsException.forDocumentId(documentId)))
+                .then();
+    }
+
+    private Mono<Void> validateDocumentIdNotExistsForUpdate(String documentId, Long currentUserId) {
+        // Si documentId es null o vacío, no validamos (es opcional)
+        if (isNullOrEmpty(documentId)) {
+            return Mono.empty();
+        }
+        
+        return userPersistencePort.findByDocumentId(documentId.trim())
+                .filter(existingUser -> !existingUser.getId().equals(currentUserId))
+                .flatMap(existingUser -> Mono.error(UserAlreadyExistsException.forDocumentId(documentId)))
                 .then();
     }
 

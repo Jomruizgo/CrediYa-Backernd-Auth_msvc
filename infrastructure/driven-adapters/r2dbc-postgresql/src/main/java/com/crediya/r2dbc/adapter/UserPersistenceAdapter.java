@@ -28,28 +28,34 @@ public class UserPersistenceAdapter implements IUserPersistencePort {
 
     @Override
     public Mono<User> save(User user) {
-        log.info(LogMessages.USER_SAVE_STARTED);
-        UserEntity entity = userMapper.toEntity(user);
-        return userRepository.save(entity)
-                .map(userMapper::toDomain)
-                .doOnSuccess(savedUser -> log.info(LogMessages.USER_SAVE_SUCCESS, savedUser.getId()))
-                .doOnError(error -> log.error(LogMessages.USER_SAVE_ERROR, error))
-                .as(transactionalOperator::transactional);
+        return Mono.deferContextual(ctx -> {
+            String correlationId = ctx.getOrDefault("correlationId", "NO_CONTEXT");
+            log.info(LogMessages.USER_SAVE_STARTED, correlationId);
+            UserEntity entity = userMapper.toEntity(user);
+            return userRepository.save(entity)
+                    .map(userMapper::toDomain)
+                    .doOnSuccess(savedUser -> log.info(LogMessages.USER_SAVE_SUCCESS, correlationId, savedUser.getId()))
+                    .doOnError(error -> log.error(LogMessages.USER_SAVE_ERROR, correlationId, error))
+                    .as(transactionalOperator::transactional);
+        });
     }
 
     @Override
     public Mono<User> findById(Long id) {
-        log.info(LogMessages.USER_FIND_BY_ID_STARTED, id);
-        return userRepository.findById(id)
-                .map(userMapper::toDomain)
-                .doOnSuccess(user -> {
-                    if (user != null) {
-                        log.info(LogMessages.USER_FIND_BY_ID_SUCCESS, id);
-                    } else {
-                        log.info(LogMessages.USER_FIND_BY_ID_NOT_FOUND, id);
-                    }
-                })
-                .doOnError(error -> log.error(LogMessages.USER_FIND_BY_ID_ERROR, error));
+        return Mono.deferContextual(ctx -> {
+            String correlationId = ctx.getOrDefault("correlationId", "NO_CONTEXT");
+            log.info(LogMessages.USER_FIND_BY_ID_STARTED, correlationId, id);
+            return userRepository.findById(id)
+                    .map(userMapper::toDomain)
+                    .doOnSuccess(user -> {
+                        if (user != null) {
+                            log.info(LogMessages.USER_FIND_BY_ID_SUCCESS, correlationId, id);
+                        } else {
+                            log.info(LogMessages.USER_FIND_BY_ID_NOT_FOUND, correlationId, id);
+                        }
+                    })
+                    .doOnError(error -> log.error(LogMessages.USER_FIND_BY_ID_ERROR, correlationId, error));
+        });
     }
 
     @Override
@@ -71,31 +77,58 @@ public class UserPersistenceAdapter implements IUserPersistencePort {
     }
 
     @Override
+    public Mono<User> findByDocumentId(String documentId) {
+        return Mono.deferContextual(ctx -> {
+            String correlationId = ctx.getOrDefault("correlationId", "NO_CONTEXT");
+            log.info(LogMessages.USER_FIND_BY_DOCUMENT_ID_STARTED, correlationId, documentId);
+            return userRepository.findByDocumentId(documentId)
+                    .map(userMapper::toDomain)
+                    .doOnSuccess(user -> {
+                        if (user != null) {
+                            log.info(LogMessages.USER_FIND_BY_DOCUMENT_ID_SUCCESS, correlationId, documentId);
+                        } else {
+                            log.info(LogMessages.USER_FIND_BY_DOCUMENT_ID_NOT_FOUND, correlationId, documentId);
+                        }
+                    })
+                    .doOnError(error -> log.error(LogMessages.USER_FIND_BY_DOCUMENT_ID_ERROR, correlationId, error));
+        });
+    }
+
+    @Override
     public Mono<User> update(User user) {
-        log.info(LogMessages.USER_UPDATE_STARTED, user.getId());
-        UserEntity entity = userMapper.toEntity(user);
-        return userRepository.save(entity)
-                .map(userMapper::toDomain)
-                .doOnSuccess(updatedUser -> log.info(LogMessages.USER_UPDATE_SUCCESS, updatedUser.getId()))
-                .doOnError(error -> log.error(LogMessages.USER_UPDATE_ERROR, error))
-                .as(transactionalOperator::transactional);
+        return Mono.deferContextual(ctx -> {
+            String correlationId = ctx.getOrDefault("correlationId", "NO_CONTEXT");
+            log.info(LogMessages.USER_UPDATE_STARTED, correlationId, user.getId());
+            UserEntity entity = userMapper.toEntity(user);
+            return userRepository.save(entity)
+                    .map(userMapper::toDomain)
+                    .doOnSuccess(updatedUser -> log.info(LogMessages.USER_UPDATE_SUCCESS, correlationId, updatedUser.getId()))
+                    .doOnError(error -> log.error(LogMessages.USER_UPDATE_ERROR, correlationId, error))
+                    .as(transactionalOperator::transactional);
+        });
     }
 
     @Override
     public Mono<Void> deleteById(Long id) {
-        log.info(LogMessages.USER_DELETE_STARTED, id);
-        return userRepository.deleteById(id)
-                .doOnSuccess(unused -> log.info(LogMessages.USER_DELETE_SUCCESS, id))
-                .doOnError(error -> log.error(LogMessages.USER_DELETE_ERROR, error))
-                .as(transactionalOperator::transactional);
+        return Mono.deferContextual(ctx -> {
+            String correlationId = ctx.getOrDefault("correlationId", "NO_CONTEXT");
+            log.info(LogMessages.USER_DELETE_STARTED, correlationId, id);
+            return userRepository.deleteById(id)
+                    .doOnSuccess(unused -> log.info(LogMessages.USER_DELETE_SUCCESS, correlationId, id))
+                    .doOnError(error -> log.error(LogMessages.USER_DELETE_ERROR, correlationId, error))
+                    .as(transactionalOperator::transactional);
+        });
     }
 
     @Override
     public Flux<User> findAll() {
-        log.info(LogMessages.USER_FIND_ALL_STARTED);
-        return userRepository.findAll()
-                .map(userMapper::toDomain)
-                .doOnComplete(() -> log.info(LogMessages.USER_FIND_ALL_SUCCESS, "completed"))
-                .doOnError(error -> log.error(LogMessages.USER_FIND_ALL_ERROR, error));
+        return Flux.deferContextual(ctx -> {
+            String correlationId = ctx.getOrDefault("correlationId", "NO_CONTEXT");
+            log.info(LogMessages.USER_FIND_ALL_STARTED, correlationId);
+            return userRepository.findAll()
+                    .map(userMapper::toDomain)
+                    .doOnComplete(() -> log.info(LogMessages.USER_FIND_ALL_SUCCESS, correlationId, "completed"))
+                    .doOnError(error -> log.error(LogMessages.USER_FIND_ALL_ERROR, correlationId, error));
+        });
     }
 }

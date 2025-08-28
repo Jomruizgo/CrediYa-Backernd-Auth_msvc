@@ -13,6 +13,8 @@ public record CreateUserRequestDto(
     @NotBlank(message = Constant.DTO_LASTNAME_REQUIRED)
     String lastName,
     
+    String documentId,
+    
     LocalDate birthDate,
     
     String address,

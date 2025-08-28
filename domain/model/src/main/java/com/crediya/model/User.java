@@ -8,6 +8,7 @@ public class User {
     private final Long id;
     private final String name;
     private final String lastName;
+    private final String documentId;
     private final LocalDate birthDate;
     private final String address;
     private final String phoneNumber;
@@ -15,12 +16,13 @@ public class User {
     private final BigDecimal baseSalary;
     private final Role role;
 
-    public User(Long id, String name, String lastName, LocalDate birthDate, 
-                String address, String phoneNumber, String email, 
+    public User(Long id, String name, String lastName, String documentId, 
+                LocalDate birthDate, String address, String phoneNumber, String email, 
                 BigDecimal baseSalary, Role role) {
         this.id = id;
         this.name = name;
         this.lastName = lastName;
+        this.documentId = documentId;
         this.birthDate = birthDate;
         this.address = address;
         this.phoneNumber = phoneNumber;
@@ -39,6 +41,10 @@ public class User {
 
     public String getLastName() {
         return lastName;
+    }
+
+    public String getDocumentId() {
+        return documentId;
     }
 
     public LocalDate getBirthDate() {
@@ -84,6 +90,7 @@ public class User {
                 "id=" + id +
                 ", name='" + name + '\'' +
                 ", lastName='" + lastName + '\'' +
+                ", documentId='" + documentId + '\'' +
                 ", birthDate=" + birthDate +
                 ", address='" + address + '\'' +
                 ", phoneNumber='" + phoneNumber + '\'' +

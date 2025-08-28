@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS users (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
+    document_id VARCHAR(20) UNIQUE,
     birth_date DATE,
     address VARCHAR(255),
     phone_number VARCHAR(20),
@@ -12,8 +13,9 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Crear índice para email para búsquedas rápidas
+-- Crear índices para búsquedas rápidas
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_document_id ON users(document_id);
 
 -- Insertar datos de prueba
 INSERT INTO users (name, last_name, birth_date, address, phone_number, email, base_salary, role) 

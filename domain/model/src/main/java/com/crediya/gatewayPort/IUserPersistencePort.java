@@ -8,6 +8,7 @@ public interface IUserPersistencePort {
     Mono<User> save(User user);
     Mono<User> findById(Long id);
     Mono<User> findByEmail(String email);
+    Mono<User> findByDocumentId(String documentId);
     Mono<User> update(User user);
     Mono<Void> deleteById(Long id);
     Flux<User> findAll();

@@ -1,4 +1,4 @@
-package com.crediya.api;
+package com.crediya.api.handler;
 
 import com.crediya.api.dto.request.CreateUserRequestDto;
 import com.crediya.api.dto.request.UpdateUserRequestDto;
@@ -42,55 +42,65 @@ public class UserHandler {
     }
 
     public Mono<ServerResponse> getUserById(ServerRequest serverRequest) {
+        String correlationId = getCorrelationId(serverRequest);
         Long userId = Long.valueOf(serverRequest.pathVariable("id"));
-        log.info(LogMessages.USER_SEARCH_BY_ID_STARTED, userId);
+        log.info(LogMessages.USER_SEARCH_BY_ID_STARTED, correlationId, userId);
         return userService.findById(userId)
                 .map(userResponseMapper::toDto)
-                .doOnSuccess(user -> log.info(LogMessages.USER_SEARCH_BY_ID_SUCCESS, user.id()))
-                .doOnError(error -> log.error(LogMessages.USER_SEARCH_BY_ID_ERROR, error))
-                .flatMap(userDto -> ServerResponse.ok().bodyValue(userDto));
+                .doOnSuccess(user -> log.info(LogMessages.USER_SEARCH_BY_ID_SUCCESS, correlationId, user.id()))
+                .doOnError(error -> log.error(LogMessages.USER_SEARCH_BY_ID_ERROR, correlationId, error))
+                .flatMap(userDto -> ServerResponse.ok().bodyValue(userDto))
+                .contextWrite(ctx -> ctx.put("correlationId", correlationId));
     }
 
     public Mono<ServerResponse> getUserByEmail(ServerRequest serverRequest) {
+        String correlationId = getCorrelationId(serverRequest);
         String email = serverRequest.queryParam("email").orElse("");
-        log.info(LogMessages.USER_SEARCH_BY_EMAIL_STARTED, email);
+        log.info(LogMessages.USER_SEARCH_BY_EMAIL_STARTED, correlationId, email);
         return userService.findByEmail(email)
                 .map(userResponseMapper::toDto)
-                .doOnSuccess(user -> log.info(LogMessages.USER_SEARCH_BY_EMAIL_SUCCESS, user.id()))
-                .doOnError(error -> log.error(LogMessages.USER_SEARCH_BY_EMAIL_ERROR, error))
-                .flatMap(userDto -> ServerResponse.ok().bodyValue(userDto));
+                .doOnSuccess(user -> log.info(LogMessages.USER_SEARCH_BY_EMAIL_SUCCESS, correlationId, user.id()))
+                .doOnError(error -> log.error(LogMessages.USER_SEARCH_BY_EMAIL_ERROR, correlationId, error))
+                .flatMap(userDto -> ServerResponse.ok().bodyValue(userDto))
+                .contextWrite(ctx -> ctx.put("correlationId", correlationId));
     }
 
     public Mono<ServerResponse> updateUser(ServerRequest serverRequest) {
+        String correlationId = getCorrelationId(serverRequest);
         Long userId = Long.valueOf(serverRequest.pathVariable("id"));
-        log.info(LogMessages.USER_UPDATE_STARTED, userId);
+        log.info(LogMessages.USER_UPDATE_STARTED, correlationId, userId);
         return serverRequest.bodyToMono(UpdateUserRequestDto.class)
                 .doOnNext(this::validateDto)
                 .map(userRequestMapper::toDomain)
                 .flatMap(user -> userService.updateUser(userId, user))
                 .map(userResponseMapper::toDto)
-                .doOnSuccess(user -> log.info(LogMessages.USER_UPDATE_SUCCESS, user.id()))
-                .doOnError(error -> log.error(LogMessages.USER_UPDATE_ERROR, error))
-                .flatMap(userDto -> ServerResponse.ok().bodyValue(userDto));
+                .doOnSuccess(user -> log.info(LogMessages.USER_UPDATE_SUCCESS, correlationId, user.id()))
+                .doOnError(error -> log.error(LogMessages.USER_UPDATE_ERROR, correlationId, error))
+                .flatMap(userDto -> ServerResponse.ok().bodyValue(userDto))
+                .contextWrite(ctx -> ctx.put("correlationId", correlationId));
     }
 
     public Mono<ServerResponse> deleteUser(ServerRequest serverRequest) {
+        String correlationId = getCorrelationId(serverRequest);
         Long userId = Long.valueOf(serverRequest.pathVariable("id"));
-        log.info(LogMessages.USER_DELETE_STARTED, userId);
+        log.info(LogMessages.USER_DELETE_STARTED, correlationId, userId);
         return userService.deleteUser(userId)
-                .doOnSuccess(unused -> log.info(LogMessages.USER_DELETE_SUCCESS, userId))
-                .doOnError(error -> log.error(LogMessages.USER_DELETE_ERROR, error))
-                .then(ServerResponse.noContent().build());
+                .doOnSuccess(unused -> log.info(LogMessages.USER_DELETE_SUCCESS, correlationId, userId))
+                .doOnError(error -> log.error(LogMessages.USER_DELETE_ERROR, correlationId, error))
+                .then(ServerResponse.noContent().build())
+                .contextWrite(ctx -> ctx.put("correlationId", correlationId));
     }
 
     public Mono<ServerResponse> getAllUsers(ServerRequest serverRequest) {
-        log.info(LogMessages.USER_LIST_ALL_STARTED);
+        String correlationId = getCorrelationId(serverRequest);
+        log.info(LogMessages.USER_LIST_ALL_STARTED, correlationId);
         return userService.findAllUsers()
                 .map(userResponseMapper::toDto)
                 .collectList()
-                .doOnSuccess(users -> log.info(LogMessages.USER_LIST_ALL_SUCCESS, users.size()))
-                .doOnError(error -> log.error(LogMessages.USER_LIST_ALL_ERROR, error))
-                .flatMap(users -> ServerResponse.ok().bodyValue(users));
+                .doOnSuccess(users -> log.info(LogMessages.USER_LIST_ALL_SUCCESS, correlationId, users.size()))
+                .doOnError(error -> log.error(LogMessages.USER_LIST_ALL_ERROR, correlationId, error))
+                .flatMap(users -> ServerResponse.ok().bodyValue(users))
+                .contextWrite(ctx -> ctx.put("correlationId", correlationId));
     }
     
     private <T> void validateDto(T dto) {

@@ -1,5 +1,6 @@
-package com.crediya.api;
+package com.crediya.api.router;
 
+import com.crediya.api.handler.UserHandler;
 import com.crediya.util.Constant;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

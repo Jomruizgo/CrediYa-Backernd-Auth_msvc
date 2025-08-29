@@ -1,11 +1,19 @@
 package com.crediya.api.handler;
 
+import com.crediya.api.docs.UserApiDocs;
 import com.crediya.api.dto.request.CreateUserRequestDto;
 import com.crediya.api.dto.request.UpdateUserRequestDto;
 import com.crediya.api.mapper.UserRequestMapper;
 import com.crediya.api.mapper.UserResponseMapper;
 import com.crediya.api.util.LogMessages;
 import com.crediya.servicePort.IUserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -19,7 +27,8 @@ import java.util.UUID;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class UserHandler {
+@Tag(name = "Users", description = "Operaciones relacionadas con usuarios")
+public class UserHandler extends UserApiDocs {
 
     private final IUserService userService;
     private final UserRequestMapper userRequestMapper;

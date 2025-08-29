@@ -27,7 +27,7 @@ import java.util.UUID;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@Tag(name = "Users", description = "Operaciones relacionadas con usuarios")
+@Tag(name = "Users", description = "Operations related to users")
 public class UserHandler extends UserApiDocs {
 
     private final IUserService userService;

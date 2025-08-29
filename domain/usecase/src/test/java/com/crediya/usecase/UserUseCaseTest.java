@@ -45,6 +45,7 @@ class UserUseCaseTest {
             null,
             "Juan",
             "Pérez",
+            "12345678901",
             LocalDate.of(1990, 1, 1),
             "Calle 123",
             "1234567890",
@@ -56,7 +57,8 @@ class UserUseCaseTest {
         existingUser = new User(
             1L,
             "Juan",
-            "Pérez", 
+            "Pérez",
+            "12345678901",
             LocalDate.of(1990, 1, 1),
             "Calle 123",
             "1234567890",
@@ -75,6 +77,7 @@ class UserUseCaseTest {
         void shouldSaveUserSuccessfully() {
             // Given
             when(userPersistencePort.findByEmail(anyString())).thenReturn(Mono.empty());
+            when(userPersistencePort.findByDocumentId(anyString())).thenReturn(Mono.empty());
             when(userPersistencePort.save(any(User.class))).thenReturn(Mono.just(existingUser));
 
             // When & Then
@@ -97,7 +100,7 @@ class UserUseCaseTest {
         void shouldThrowExceptionWhenNameIsNull() {
             // Given
             User userWithNullName = new User(
-                null, null, "Pérez", LocalDate.now(),
+                null, null, "Pérez", "12345678901", LocalDate.now(),
                 "Address", "123456789", "test@email.com",
                 new BigDecimal("2000000"), Role.CLIENT
             );
@@ -114,7 +117,7 @@ class UserUseCaseTest {
         void shouldThrowExceptionWhenNameIsEmpty() {
             // Given
             User userWithEmptyName = new User(
-                null, "   ", "Pérez", LocalDate.now(),
+                null, "   ", "Pérez", "12345678901", LocalDate.now(),
                 "Address", "123456789", "test@email.com",
                 new BigDecimal("2000000"), Role.CLIENT
             );
@@ -131,7 +134,7 @@ class UserUseCaseTest {
         void shouldThrowExceptionWhenLastNameIsNull() {
             // Given
             User userWithNullLastName = new User(
-                null, "Juan", null, LocalDate.now(),
+                null, "Juan", null, "12345678901", LocalDate.now(),
                 "Address", "123456789", "test@email.com",
                 new BigDecimal("2000000"), Role.CLIENT
             );
@@ -148,7 +151,7 @@ class UserUseCaseTest {
         void shouldThrowExceptionWhenEmailIsNull() {
             // Given
             User userWithNullEmail = new User(
-                null, "Juan", "Pérez", LocalDate.now(),
+                null, "Juan", "Pérez", "12345678901", LocalDate.now(),
                 "Address", "123456789", null,
                 new BigDecimal("2000000"), Role.CLIENT
             );
@@ -165,7 +168,7 @@ class UserUseCaseTest {
         void shouldThrowExceptionWhenBaseSalaryIsNull() {
             // Given
             User userWithNullSalary = new User(
-                null, "Juan", "Pérez", LocalDate.now(),
+                null, "Juan", "Pérez", "12345678901", LocalDate.now(),
                 "Address", "123456789", "test@email.com",
                 null, Role.CLIENT
             );
@@ -182,7 +185,7 @@ class UserUseCaseTest {
         void shouldThrowExceptionWhenEmailFormatIsInvalid() {
             // Given
             User userWithInvalidEmail = new User(
-                null, "Juan", "Pérez", LocalDate.now(),
+                null, "Juan", "Pérez", "12345678901", LocalDate.now(),
                 "Address", "123456789", "invalid-email",
                 new BigDecimal("2000000"), Role.CLIENT
             );
@@ -199,7 +202,7 @@ class UserUseCaseTest {
         void shouldThrowExceptionWhenSalaryIsBelowMinimum() {
             // Given
             User userWithLowSalary = new User(
-                null, "Juan", "Pérez", LocalDate.now(),
+                null, "Juan", "Pérez", "12345678901", LocalDate.now(),
                 "Address", "123456789", "test@email.com",
                 new BigDecimal("-1"), Role.CLIENT
             );
@@ -216,7 +219,7 @@ class UserUseCaseTest {
         void shouldThrowExceptionWhenSalaryIsAboveMaximum() {
             // Given
             User userWithHighSalary = new User(
-                null, "Juan", "Pérez", LocalDate.now(),
+                null, "Juan", "Pérez", "12345678901", LocalDate.now(),
                 "Address", "123456789", "test@email.com",
                 new BigDecimal("20000000"), Role.CLIENT
             );
@@ -233,10 +236,63 @@ class UserUseCaseTest {
         void shouldThrowExceptionWhenEmailAlreadyExists() {
             // Given
             when(userPersistencePort.findByEmail(anyString())).thenReturn(Mono.just(existingUser));
+            when(userPersistencePort.findByDocumentId(anyString())).thenReturn(Mono.empty());
 
             // When & Then
             StepVerifier.create(userUseCase.saveUser(validUser))
                 .expectError(UserAlreadyExistsException.class)
+                .verify();
+        }
+
+        @Test
+        @DisplayName("Should save user successfully when documentId is null")
+        void shouldSaveUserSuccessfullyWhenDocumentIdIsNull() {
+            // Given
+            User userWithNullDocumentId = new User(
+                null, "Juan", "Pérez", null, LocalDate.now(),
+                "Address", "123456789", "test@email.com",
+                new BigDecimal("2000000"), Role.CLIENT
+            );
+            
+            when(userPersistencePort.findByEmail(anyString())).thenReturn(Mono.empty());
+            when(userPersistencePort.save(any(User.class))).thenReturn(Mono.just(userWithNullDocumentId));
+
+            // When & Then
+            StepVerifier.create(userUseCase.saveUser(userWithNullDocumentId))
+                .expectNext(userWithNullDocumentId)
+                .verifyComplete();
+        }
+
+        @Test
+        @DisplayName("Should save user successfully when documentId is empty")
+        void shouldSaveUserSuccessfullyWhenDocumentIdIsEmpty() {
+            // Given
+            User userWithEmptyDocumentId = new User(
+                null, "Juan", "Pérez", "   ", LocalDate.now(),
+                "Address", "123456789", "test@email.com",
+                new BigDecimal("2000000"), Role.CLIENT
+            );
+            
+            when(userPersistencePort.findByEmail(anyString())).thenReturn(Mono.empty());
+            when(userPersistencePort.save(any(User.class))).thenReturn(Mono.just(userWithEmptyDocumentId));
+
+            // When & Then
+            StepVerifier.create(userUseCase.saveUser(userWithEmptyDocumentId))
+                .expectNext(userWithEmptyDocumentId)
+                .verifyComplete();
+        }
+
+        @Test
+        @DisplayName("Should throw UserAlreadyExistsException when documentId already exists")
+        void shouldThrowExceptionWhenDocumentIdAlreadyExists() {
+            // Given
+            when(userPersistencePort.findByEmail(anyString())).thenReturn(Mono.empty());
+            when(userPersistencePort.findByDocumentId("12345678901")).thenReturn(Mono.just(existingUser));
+
+            // When & Then
+            StepVerifier.create(userUseCase.saveUser(validUser))
+                .expectErrorMatches(ex -> ex instanceof UserAlreadyExistsException &&
+                    ex.getMessage().contains("Document ID 12345678901 is already registered"))
                 .verify();
         }
     }
@@ -342,6 +398,55 @@ class UserUseCaseTest {
     }
 
     @Nested
+    @DisplayName("Find By Document ID Tests")
+    class FindByDocumentIdTests {
+
+        @Test
+        @DisplayName("Should find user by documentId successfully")
+        void shouldFindUserByDocumentIdSuccessfully() {
+            // Given
+            when(userPersistencePort.findByDocumentId("12345678901")).thenReturn(Mono.just(existingUser));
+
+            // When & Then
+            StepVerifier.create(userUseCase.findByDocumentId("12345678901"))
+                .expectNext(existingUser)
+                .verifyComplete();
+        }
+
+        @Test
+        @DisplayName("Should throw InvalidUserDataException when documentId is null")
+        void shouldThrowExceptionWhenDocumentIdIsNull() {
+            // When & Then
+            StepVerifier.create(userUseCase.findByDocumentId(null))
+                .expectErrorMatches(ex -> ex instanceof InvalidUserDataException &&
+                    ex.getMessage().equals("Document ID is required for search"))
+                .verify();
+        }
+
+        @Test
+        @DisplayName("Should throw InvalidUserDataException when documentId is empty")
+        void shouldThrowExceptionWhenDocumentIdIsEmpty() {
+            // When & Then
+            StepVerifier.create(userUseCase.findByDocumentId("   "))
+                .expectErrorMatches(ex -> ex instanceof InvalidUserDataException &&
+                    ex.getMessage().equals("Document ID is required for search"))
+                .verify();
+        }
+
+        @Test
+        @DisplayName("Should throw UserNotFoundException when user not found by documentId")
+        void shouldThrowExceptionWhenUserNotFoundByDocumentId() {
+            // Given
+            when(userPersistencePort.findByDocumentId(anyString())).thenReturn(Mono.empty());
+
+            // When & Then
+            StepVerifier.create(userUseCase.findByDocumentId("99999999999"))
+                .expectError(UserNotFoundException.class)
+                .verify();
+        }
+    }
+
+    @Nested
     @DisplayName("Update User Tests")
     class UpdateUserTests {
 
@@ -350,18 +455,19 @@ class UserUseCaseTest {
         void shouldUpdateUserSuccessfully() {
             // Given
             User updatedUser = new User(
-                1L, "Juan Updated", "Pérez Updated", LocalDate.now(),
+                1L, "Juan Updated", "Pérez Updated", "99999999999", LocalDate.now(),
                 "New Address", "987654321", "juan.updated@email.com",
                 new BigDecimal("3000000"), Role.ADMIN
             );
             
             when(userPersistencePort.findById(1L)).thenReturn(Mono.just(existingUser));
             when(userPersistencePort.findByEmail("juan.updated@email.com")).thenReturn(Mono.empty());
+            when(userPersistencePort.findByDocumentId("99999999999")).thenReturn(Mono.empty());
             when(userPersistencePort.update(any(User.class))).thenReturn(Mono.just(updatedUser));
 
             // When & Then
             StepVerifier.create(userUseCase.updateUser(1L, new User(
-                null, "Juan Updated", "Pérez Updated", LocalDate.now(),
+                null, "Juan Updated", "Pérez Updated", "99999999999", LocalDate.now(),
                 "New Address", "987654321", "juan.updated@email.com",
                 new BigDecimal("3000000"), Role.ADMIN
             )))
@@ -375,6 +481,7 @@ class UserUseCaseTest {
             // Given
             when(userPersistencePort.findById(1L)).thenReturn(Mono.just(existingUser));
             when(userPersistencePort.findByEmail("juan.perez@email.com")).thenReturn(Mono.just(existingUser));
+            when(userPersistencePort.findByDocumentId("12345678901")).thenReturn(Mono.just(existingUser));
             when(userPersistencePort.update(any(User.class))).thenReturn(Mono.just(existingUser));
 
             // When & Then
@@ -410,13 +517,54 @@ class UserUseCaseTest {
         void shouldThrowExceptionWhenEmailExistsForAnotherUser() {
             // Given
             User anotherUser = new User(
-                2L, "Another", "User", LocalDate.now(),
+                2L, "Another", "User", "99999999999", LocalDate.now(),
                 "Address", "123456789", "juan.perez@email.com",
                 new BigDecimal("2000000"), Role.CLIENT
             );
             
             when(userPersistencePort.findById(1L)).thenReturn(Mono.just(existingUser));
             when(userPersistencePort.findByEmail("juan.perez@email.com")).thenReturn(Mono.just(anotherUser));
+            when(userPersistencePort.findByDocumentId("12345678901")).thenReturn(Mono.empty());
+
+            // When & Then
+            StepVerifier.create(userUseCase.updateUser(1L, validUser))
+                .expectError(UserAlreadyExistsException.class)
+                .verify();
+        }
+
+        @Test
+        @DisplayName("Should update user successfully when documentId is null")
+        void shouldUpdateUserSuccessfullyWhenDocumentIdIsNull() {
+            // Given
+            User userWithNullDocumentId = new User(
+                null, "Juan", "Pérez", null, LocalDate.now(),
+                "Address", "123456789", "test@email.com",
+                new BigDecimal("2000000"), Role.CLIENT
+            );
+            
+            when(userPersistencePort.findById(1L)).thenReturn(Mono.just(existingUser));
+            when(userPersistencePort.findByEmail("test@email.com")).thenReturn(Mono.empty());
+            when(userPersistencePort.update(any(User.class))).thenReturn(Mono.just(userWithNullDocumentId));
+
+            // When & Then
+            StepVerifier.create(userUseCase.updateUser(1L, userWithNullDocumentId))
+                .expectNext(userWithNullDocumentId)
+                .verifyComplete();
+        }
+
+        @Test
+        @DisplayName("Should throw UserAlreadyExistsException when documentId exists for another user")
+        void shouldThrowExceptionWhenDocumentIdExistsForAnotherUser() {
+            // Given
+            User anotherUser = new User(
+                2L, "Another", "User", "12345678901", LocalDate.now(),
+                "Address", "123456789", "another@email.com",
+                new BigDecimal("2000000"), Role.CLIENT
+            );
+            
+            when(userPersistencePort.findById(1L)).thenReturn(Mono.just(existingUser));
+            when(userPersistencePort.findByEmail("juan.perez@email.com")).thenReturn(Mono.empty());
+            when(userPersistencePort.findByDocumentId("12345678901")).thenReturn(Mono.just(anotherUser));
 
             // When & Then
             StepVerifier.create(userUseCase.updateUser(1L, validUser))
@@ -473,8 +621,8 @@ class UserUseCaseTest {
         @DisplayName("Should return all users successfully")
         void shouldReturnAllUsersSuccessfully() {
             // Given
-            User user1 = new User(1L, "Juan", "Pérez", LocalDate.now(), "Address", "123", "juan@email.com", new BigDecimal("2000000"), Role.CLIENT);
-            User user2 = new User(2L, "Ana", "García", LocalDate.now(), "Address", "456", "ana@email.com", new BigDecimal("3000000"), Role.ADMIN);
+            User user1 = new User(1L, "Juan", "Pérez", "11111111111", LocalDate.now(), "Address", "123", "juan@email.com", new BigDecimal("2000000"), Role.CLIENT);
+            User user2 = new User(2L, "Ana", "García", "22222222222", LocalDate.now(), "Address", "456", "ana@email.com", new BigDecimal("3000000"), Role.ADMIN);
             
             when(userPersistencePort.findAll()).thenReturn(Flux.just(user1, user2));
 

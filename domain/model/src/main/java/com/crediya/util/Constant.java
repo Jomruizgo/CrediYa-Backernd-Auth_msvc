@@ -27,6 +27,7 @@ public class Constant {
     public static final String INVALID_ID = "ID cannot be null";
     public static final String INVALID_EMAIL = "Email cannot be null or empty";
     public static final String INVALID_EMAIL_FORMAT = "Email must have a valid format";
+    public static final String INVALID_DOCUMENT_ID = "Document ID cannot be null or empty";
 
     // Success Messages
     public static final String USER_CREATED_SUCCESSFULLY = "User created successfully";

@@ -53,6 +53,15 @@ public class UserUseCase implements IUserService {
     }
 
     @Override
+    public Mono<User> findByDocumentId(String documentId) {
+        if (documentId == null || documentId.trim().isEmpty()) {
+            return Mono.error(new InvalidUserDataException("Document ID is required for search"));
+        }
+        return userPersistencePort.findByDocumentId(documentId.trim())
+                .switchIfEmpty(Mono.error(new UserNotFoundException("User with document ID " + documentId + " not found")));
+    }
+
+    @Override
     public Mono<User> updateUser(Long id, User user) {
         if (id == null) {
             return Mono.error(new InvalidUserDataException(Constant.INVALID_ID));

@@ -3,8 +3,10 @@ package com.crediya.usecase;
 import com.crediya.exception.InvalidUserDataException;
 import com.crediya.exception.UserAlreadyExistsException;
 import com.crediya.exception.UserNotFoundException;
+import com.crediya.gatewayPort.IPasswordEncoderPort;
 import com.crediya.gatewayPort.IUserPersistencePort;
 import com.crediya.model.User;
+import com.crediya.model.UserStatus;
 import com.crediya.servicePort.IUserService;
 import com.crediya.util.Constant;
 import reactor.core.publisher.Flux;
@@ -18,9 +20,11 @@ public class UserUseCase implements IUserService {
     private static final Pattern EMAIL_PATTERN = Pattern.compile(Constant.EMAIL_REGEX);
     
     private final IUserPersistencePort userPersistencePort;
+    private final IPasswordEncoderPort passwordEncoder;
 
-    public UserUseCase(IUserPersistencePort userPersistencePort) {
+    public UserUseCase(IUserPersistencePort userPersistencePort, IPasswordEncoderPort passwordEncoder) {
         this.userPersistencePort = userPersistencePort;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -31,6 +35,7 @@ public class UserUseCase implements IUserService {
                 .flatMap(validUser -> validateEmailNotExists(validUser.getEmail())
                         .then(validateDocumentIdNotExists(validUser.getDocumentId()))
                         .then(Mono.just(validUser)))
+                .map(this::encryptPassword)
                 .flatMap(userPersistencePort::save);
     }
 
@@ -83,9 +88,11 @@ public class UserUseCase implements IUserService {
                         validUser.getBirthDate(),
                         validUser.getAddress(), 
                         validUser.getPhoneNumber(), 
-                        validUser.getEmail(), 
+                        validUser.getEmail(),
+                        validUser.getPassword(),
                         validUser.getBaseSalary(),
-                        validUser.getRole()
+                        validUser.getRole(),
+                        validUser.getStatus()
                 ))
                 .flatMap(userPersistencePort::update);
     }
@@ -113,11 +120,18 @@ public class UserUseCase implements IUserService {
         
         if (isNullOrEmpty(user.getName()) || 
             isNullOrEmpty(user.getLastName()) || 
-            isNullOrEmpty(user.getEmail()) || 
-            user.getBaseSalary() == null) {
+            isNullOrEmpty(user.getEmail()) ||
+            user.getBaseSalary() == null ||
+            user.getStatus() == null) {
             return Mono.error(new InvalidUserDataException(Constant.INVALID_REQUIRED_FIELDS));
         }
         
+        // For ACTIVE users, password is required
+        if (user.getStatus() == UserStatus.ACTIVE && !user.hasCredentials()) {
+            return Mono.error(new InvalidUserDataException("Active users require password"));
+        }
+        
+        // For PENDING/AWAITING_SETUP users, password is optional
         return Mono.just(user);
     }
 
@@ -175,5 +189,28 @@ public class UserUseCase implements IUserService {
 
     private boolean isNullOrEmpty(String value) {
         return value == null || value.trim().isEmpty();
+    }
+
+    private User encryptPassword(User user) {
+        // Only encrypt if password exists
+        if (!user.hasCredentials()) {
+            return user;
+        }
+        
+        String encryptedPassword = passwordEncoder.encode(user.getPassword());
+        return new User(
+                user.getId(),
+                user.getName(),
+                user.getLastName(),
+                user.getDocumentId(),
+                user.getBirthDate(),
+                user.getAddress(),
+                user.getPhoneNumber(),
+                user.getEmail(),
+                encryptedPassword,
+                user.getBaseSalary(),
+                user.getRole(),
+                user.getStatus()
+        );
     }
 }

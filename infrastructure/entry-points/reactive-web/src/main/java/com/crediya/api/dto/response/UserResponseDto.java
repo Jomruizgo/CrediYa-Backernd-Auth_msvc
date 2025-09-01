@@ -1,6 +1,7 @@
 package com.crediya.api.dto.response;
 
 import com.crediya.model.Role;
+import com.crediya.model.UserStatus;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
@@ -14,5 +15,6 @@ public record UserResponseDto(
     String phoneNumber,
     String email,
     BigDecimal baseSalary,
-    Role role
+    Role role,
+    UserStatus status
 ) {}

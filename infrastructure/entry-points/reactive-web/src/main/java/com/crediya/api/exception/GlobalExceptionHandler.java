@@ -1,5 +1,6 @@
 package com.crediya.api.exception;
 
+import com.crediya.exception.InvalidCredentialsException;
 import com.crediya.exception.InvalidUserDataException;
 import com.crediya.exception.UserAlreadyExistsException;
 import com.crediya.exception.UserNotFoundException;
@@ -28,7 +29,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidUserDataException.class)
     public Mono<ResponseEntity<ExceptionResponse>> handleInvalidUserDataException(InvalidUserDataException ex, ServerWebExchange exchange) {
         String correlationId = getCorrelationId(exchange);
-        logger.error("[CREDIYA-{}] User data validation error: {} at {}", correlationId, ex.getMessage(), ex.getStackTrace()[0]);
+        logger.error(ErrorConstants.LOG_USER_DATA_VALIDATION_ERROR, correlationId, ex.getMessage(), ex.getStackTrace()[0]);
         
         ExceptionResponse errorResponse = new ExceptionResponse(
             ex.getMessage(),
@@ -42,7 +43,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UserNotFoundException.class)
     public Mono<ResponseEntity<ExceptionResponse>> handleUserNotFoundException(UserNotFoundException ex, ServerWebExchange exchange) {
         String correlationId = getCorrelationId(exchange);
-        logger.error("[CREDIYA-{}] User not found: {} at {}", correlationId, ex.getMessage(), ex.getStackTrace()[0]);
+        logger.error(ErrorConstants.LOG_USER_NOT_FOUND, correlationId, ex.getMessage(), ex.getStackTrace()[0]);
         
         ExceptionResponse errorResponse = new ExceptionResponse(
             ex.getMessage(),
@@ -56,7 +57,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UserAlreadyExistsException.class)
     public Mono<ResponseEntity<ExceptionResponse>> handleUserAlreadyExistsException(UserAlreadyExistsException ex, ServerWebExchange exchange) {
         String correlationId = getCorrelationId(exchange);
-        logger.error("[CREDIYA-{}] User already exists: {} at {}", correlationId, ex.getMessage(), ex.getStackTrace()[0]);
+        logger.error(ErrorConstants.LOG_USER_ALREADY_EXISTS, correlationId, ex.getMessage(), ex.getStackTrace()[0]);
         
         ExceptionResponse errorResponse = new ExceptionResponse(
             ex.getMessage(),
@@ -67,17 +68,31 @@ public class GlobalExceptionHandler {
         return Mono.just(ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse));
     }
 
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public Mono<ResponseEntity<ExceptionResponse>> handleInvalidCredentialsException(InvalidCredentialsException ex, ServerWebExchange exchange) {
+        String correlationId = getCorrelationId(exchange);
+        logger.warn(ErrorConstants.LOG_INVALID_CREDENTIALS, correlationId, ex.getMessage());
+        
+        ExceptionResponse errorResponse = new ExceptionResponse(
+            ex.getMessage(),
+            ErrorConstants.UNAUTHORIZED,
+            LocalDateTime.now()
+        );
+        
+        return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse));
+    }
+
     @ExceptionHandler(WebExchangeBindException.class)
     public Mono<ResponseEntity<ExceptionResponse>> handleValidationException(WebExchangeBindException ex, ServerWebExchange exchange) {
         String correlationId = getCorrelationId(exchange);
-        logger.error("[CREDIYA-{}] Validation error: {} at {}", correlationId, ex.getMessage(), ex.getStackTrace()[0]);
+        logger.error(ErrorConstants.LOG_VALIDATION_ERROR, correlationId, ex.getMessage(), ex.getStackTrace()[0]);
         
         String validationErrors = ex.getBindingResult().getFieldErrors().stream()
             .map(error -> error.getField() + ": " + error.getDefaultMessage())
             .collect(Collectors.joining(", "));
         
         ExceptionResponse errorResponse = new ExceptionResponse(
-            "Validation failed: " + validationErrors,
+            ErrorConstants.VALIDATION_FAILED_PREFIX + validationErrors,
             ErrorConstants.VALIDATION_ERROR,
             LocalDateTime.now()
         );
@@ -88,14 +103,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     public Mono<ResponseEntity<ExceptionResponse>> handleConstraintViolationException(ConstraintViolationException ex, ServerWebExchange exchange) {
         String correlationId = getCorrelationId(exchange);
-        logger.error("[CREDIYA-{}] Constraint violation: {} at {}", correlationId, ex.getMessage(), ex.getStackTrace()[0]);
+        logger.error(ErrorConstants.LOG_CONSTRAINT_VIOLATION, correlationId, ex.getMessage(), ex.getStackTrace()[0]);
         
         String constraintErrors = ex.getConstraintViolations().stream()
             .map(violation -> violation.getPropertyPath() + ": " + violation.getMessage())
             .collect(Collectors.joining(", "));
         
         ExceptionResponse errorResponse = new ExceptionResponse(
-            "Validation failed: " + constraintErrors,
+            ErrorConstants.VALIDATION_FAILED_PREFIX + constraintErrors,
             ErrorConstants.VALIDATION_ERROR,
             LocalDateTime.now()
         );
@@ -106,7 +121,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public Mono<ResponseEntity<ExceptionResponse>> handleGenericException(Exception ex, ServerWebExchange exchange) {
         String correlationId = getCorrelationId(exchange);
-        logger.error("[CREDIYA-{}] Unexpected error occurred: {} at {}", correlationId, ex.getMessage(), ex.getStackTrace()[0]);
+        logger.error(ErrorConstants.LOG_UNEXPECTED_ERROR, correlationId, ex.getMessage(), ex.getStackTrace()[0]);
         
         ExceptionResponse errorResponse = new ExceptionResponse(
             ErrorConstants.UNEXPECTED_ERROR,

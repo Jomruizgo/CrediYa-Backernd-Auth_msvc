@@ -9,6 +9,10 @@ spring:
     name: "Auth-Dev"
   devtools:
     add-properties: false
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
 
 # Development database - hardcoded values (safe for development)
 adapters:
@@ -58,3 +62,10 @@ management:
 
 cors:
   allowed-origins: "http://localhost:4200,http://localhost:8080,http://localhost:8081"
+
+# JWT Security Configuration
+security:
+  jwt:
+    secret: "mySecretKeyForDevelopment123456789012345678901234567890SecureHS512"
+    access-token-validity-minutes: 15
+    refresh-token-validity-days: 7

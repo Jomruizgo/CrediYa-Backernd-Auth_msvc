@@ -58,3 +58,8 @@ security:
     frame-options: DENY
     content-type-options: true
     xss-protection: true
+  # JWT Configuration - use environment variables in production
+  jwt:
+    secret: ${JWT_SECRET:CHANGE_THIS_SECRET_IN_PRODUCTION_123456789012345678901234567890}
+    access-token-validity-minutes: ${JWT_ACCESS_TOKEN_VALIDITY:15}
+    refresh-token-validity-days: ${JWT_REFRESH_TOKEN_VALIDITY:7}

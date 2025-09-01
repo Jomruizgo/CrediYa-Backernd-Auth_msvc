@@ -1,6 +1,7 @@
 package com.crediya.r2dbc.entity;
 
 import com.crediya.model.Role;
+import com.crediya.model.UserStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -42,9 +43,15 @@ public class UserEntity {
     @Column("email")
     private String email;
     
+    @Column("password")
+    private String password;
+    
     @Column("base_salary")
     private BigDecimal baseSalary;
     
     @Column("role")
     private Role role;
+    
+    @Column("status")
+    private UserStatus status;
 }

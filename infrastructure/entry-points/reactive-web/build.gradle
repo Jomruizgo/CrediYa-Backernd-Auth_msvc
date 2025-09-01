@@ -9,4 +9,8 @@ dependencies {
     implementation 'org.mapstruct:mapstruct:1.6.3'
     annotationProcessor 'org.mapstruct:mapstruct-processor:1.6.3'
     implementation 'org.springdoc:springdoc-openapi-starter-webflux-ui:2.8.9'
+    
+    // Security dependencies for filters and configuration
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    testImplementation 'org.springframework.security:spring-security-test'
 }

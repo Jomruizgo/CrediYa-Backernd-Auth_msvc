@@ -34,16 +34,56 @@ public class Constant {
     public static final String USER_UPDATED_SUCCESSFULLY = "User updated successfully";
     public static final String USER_DELETED_SUCCESSFULLY = "User deleted successfully";
 
+    // Authentication Messages
+    public static final String INVALID_CREDENTIALS = "Invalid email or password";
+    public static final String INVALID_TOKEN = "Invalid or expired token";
+    public static final String TOKEN_EXPIRED = "Token has expired";
+    public static final String INVALID_REFRESH_TOKEN = "Invalid refresh token";
+    public static final String AUTHENTICATION_FAILED = "Authentication failed";
+    public static final String LOGOUT_SUCCESSFUL = "Logout successful";
+    public static final String TOKEN_REFRESHED_SUCCESSFULLY = "Token refreshed successfully";
+
+    // Authentication Log Messages
+    public static final String AUTH_STARTED = "Authentication started for correlationId: {}";
+    public static final String AUTH_SUCCESS = "Authentication successful for correlationId: {}";
+    public static final String AUTH_FAILED = "Authentication failed for correlationId: {}";
+    public static final String TOKEN_REFRESH_STARTED = "Token refresh started for correlationId: {}";
+    public static final String TOKEN_REFRESH_SUCCESS = "Token refresh successful for correlationId: {}";
+    public static final String TOKEN_REFRESH_FAILED = "Token refresh failed for correlationId: {}";
+    public static final String LOGOUT_STARTED = "Logout started for correlationId: {}";
+    public static final String LOGOUT_SUCCESS = "Logout successful for correlationId: {}";
+    public static final String LOGOUT_FAILED = "Logout failed for correlationId: {}";
+
     // API Paths
     public static final String API_USER_PATH = "/api/v1/user";
+    public static final String API_AUTH_PATH = "/api/v1/auth";
+    public static final String API_AUTH_LOGIN_PATH = API_AUTH_PATH + "/login";
+    public static final String API_AUTH_REFRESH_PATH = API_AUTH_PATH + "/refresh";
+    public static final String API_AUTH_LOGOUT_PATH = API_AUTH_PATH + "/logout";
     
     // DTO Validation Messages (Entry Point Layer)
     public static final String DTO_NAME_REQUIRED = "Name field is mandatory";
     public static final String DTO_LASTNAME_REQUIRED = "Last name field is mandatory";
     public static final String DTO_EMAIL_REQUIRED = "Email field is mandatory";
     public static final String DTO_EMAIL_INVALID = "Invalid email format provided";
+    public static final String DTO_PASSWORD_REQUIRED = "Password field is mandatory";
+    public static final String DTO_PASSWORD_MIN_LENGTH = "Password must be at least 8 characters long";
+    public static final String DTO_REFRESH_TOKEN_REQUIRED = "Refresh token is required";
     public static final String DTO_SALARY_REQUIRED = "Base salary field is mandatory";
     public static final String DTO_SALARY_MIN = "Base salary cannot be less than 0";
     public static final String DTO_SALARY_MAX = "Base salary cannot exceed 15,000,000";
     public static final String DTO_ROLE_REQUIRED = "Role field is mandatory";
+
+    // OpenAPI Documentation Messages
+    public static final String OPENAPI_LOGIN_REQUEST_DESC = "Login request with user credentials";
+    public static final String OPENAPI_EMAIL_DESC = "User email address";
+    public static final String OPENAPI_EMAIL_EXAMPLE = "user@crediya.com";
+    public static final String OPENAPI_PASSWORD_DESC = "User password (minimum 8 characters)";
+    public static final String OPENAPI_PASSWORD_EXAMPLE = "securePassword123";
+    public static final String OPENAPI_REFRESH_TOKEN_REQUEST_DESC = "Request to refresh access token";
+    public static final String OPENAPI_REFRESH_TOKEN_DESC = "Refresh token for obtaining new access token";
+    public static final String OPENAPI_AUTH_RESPONSE_DESC = "Authentication response with tokens and user information";
+    public static final String OPENAPI_ACCESS_TOKEN_DESC = "JWT access token for API authentication";
+    public static final String OPENAPI_REFRESH_TOKEN_RESPONSE_DESC = "Refresh token for getting new access tokens";
+    public static final String OPENAPI_USER_INFO_DESC = "Authenticated user information";
 }

@@ -32,7 +32,8 @@ public class AuthenticationUseCase implements IAuthenticationService {
             return Mono.error(new InvalidCredentialsException(Constant.INVALID_CREDENTIALS));
         }
         
-        return userService.findByEmail(email.trim().toLowerCase())
+        return Mono.just(email.trim().toLowerCase())
+            .flatMap(userService::findByEmail)
             .cast(User.class)
             .filter(User::canLogin)  // Check status ACTIVE + has credentials
             .filter(user -> passwordEncoder.matches(password, user.getPassword()))
@@ -51,21 +52,14 @@ public class AuthenticationUseCase implements IAuthenticationService {
         }
         
         String username = tokenProvider.extractUsername(refreshToken);
-        return userService.findByEmail(username)
+        return Mono.just(username)
+            .flatMap(userService::findByEmail)
             .cast(User.class)
             .flatMap(this::generateTokensForUser)
             .onErrorMap(UserNotFoundException.class, 
                 ex -> new InvalidCredentialsException(Constant.INVALID_REFRESH_TOKEN));
     }
 
-    @Override
-    public Mono<Void> logout(String refreshToken) {
-        // In this simple implementation, since JWT is stateless, 
-        // logout is handled on client side by removing tokens
-        // In implementation with blacklist or refresh tokens in DB, 
-        // here they would be marked as revoked
-        return Mono.empty();
-    }
 
     private Mono<AuthenticationResponse> generateTokensForUser(User user) {
         AuthenticationToken accessToken = tokenProvider.generateAccessToken(user);

@@ -20,12 +20,10 @@ public class AuthRouterRest {
     @Bean
     @RouterOperations({
         @RouterOperation(path = Constant.API_AUTH_LOGIN_PATH, method = RequestMethod.POST, beanClass = AuthHandler.class, beanMethod = "login"),
-        @RouterOperation(path = Constant.API_AUTH_REFRESH_PATH, method = RequestMethod.POST, beanClass = AuthHandler.class, beanMethod = "refreshToken"),
-        @RouterOperation(path = Constant.API_AUTH_LOGOUT_PATH, method = RequestMethod.POST, beanClass = AuthHandler.class, beanMethod = "logout")
+        @RouterOperation(path = Constant.API_AUTH_REFRESH_PATH, method = RequestMethod.POST, beanClass = AuthHandler.class, beanMethod = "refreshToken")
     })
     public RouterFunction<ServerResponse> authRoutes(AuthHandler authHandler) {
         return route(POST(Constant.API_AUTH_LOGIN_PATH).and(accept(MediaType.APPLICATION_JSON)), authHandler::login)
-                .andRoute(POST(Constant.API_AUTH_REFRESH_PATH).and(accept(MediaType.APPLICATION_JSON)), authHandler::refreshToken)
-                .andRoute(POST(Constant.API_AUTH_LOGOUT_PATH).and(accept(MediaType.APPLICATION_JSON)), authHandler::logout);
+                .andRoute(POST(Constant.API_AUTH_REFRESH_PATH).and(accept(MediaType.APPLICATION_JSON)), authHandler::refreshToken);
     }
 }

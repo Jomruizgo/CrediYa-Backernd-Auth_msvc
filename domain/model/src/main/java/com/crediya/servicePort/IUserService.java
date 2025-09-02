@@ -5,7 +5,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public interface IUserService {
-    Mono<User> saveUser(User user);
+    Mono<User> saveUser(User user, String creatorRole);
     Mono<User> findById(Long id);
     Mono<User> findByEmail(String email);
     Mono<User> findByDocumentId(String documentId);

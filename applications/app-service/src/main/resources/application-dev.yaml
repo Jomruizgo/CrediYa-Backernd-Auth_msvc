@@ -37,7 +37,7 @@ logging:
     co.com.bancolombia.secretsmanager: ERROR
     org.springframework: WARN
   pattern:
-    console: "%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%-5level){highlight} %clr([%15.15t]){faint} %clr([%X{correlationId:-NO_TRACE}]){magenta} %clr(%logger{36}){blue} - %msg%n%wEx{2}"
+    console: "%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%-5level){highlight} %clr([%15.15t]){faint} %clr(%logger{36}){blue} - %msg%n%wEx{2}"
 
 springdoc:
   api-docs:

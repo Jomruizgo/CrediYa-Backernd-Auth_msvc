@@ -17,6 +17,7 @@ import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Component
@@ -31,7 +32,7 @@ public class JwtAuthenticationWebFilter implements WebFilter {
         String token = extractToken(exchange.getRequest());
         
         if (token != null && tokenProvider.validateToken(token)) {
-            return authenticateToken(token)
+            return authenticateToken(token, exchange)
                     .flatMap(authentication -> chain.filter(exchange)
                             .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication)))
                     .onErrorResume(error -> {
@@ -51,9 +52,10 @@ public class JwtAuthenticationWebFilter implements WebFilter {
         return null;
     }
 
-    private Mono<UsernamePasswordAuthenticationToken> authenticateToken(String token) {
+    private Mono<UsernamePasswordAuthenticationToken> authenticateToken(String token, ServerWebExchange exchange) {
         String username = tokenProvider.extractUsername(token);
         if (username != null) {
+            String correlationId = getCorrelationId(exchange.getRequest());
             return userService.findByEmail(username)
                     .map(user -> {
                         List<SimpleGrantedAuthority> authorities = List.of(
@@ -61,8 +63,17 @@ public class JwtAuthenticationWebFilter implements WebFilter {
                         );
                         return new UsernamePasswordAuthenticationToken(username, null, authorities);
                     })
-                    .cast(UsernamePasswordAuthenticationToken.class);
+                    .cast(UsernamePasswordAuthenticationToken.class)
+                    .contextWrite(ctx -> ctx.put("correlationId", correlationId));
         }
         return Mono.empty();
+    }
+    
+    private String getCorrelationId(ServerHttpRequest request) {
+        String correlationId = request.getHeaders().getFirst("X-Correlation-ID");
+        if (correlationId == null || correlationId.isEmpty()) {
+            correlationId = UUID.randomUUID().toString().substring(0, 8);
+        }
+        return correlationId;
     }
 }

@@ -45,26 +45,14 @@ public class AuthHandler {
         
         return serverRequest.bodyToMono(RefreshTokenRequestDto.class)
                 .doOnNext(this::validateDto)
+                .contextWrite(ctx -> ctx.put("correlationId", correlationId))
                 .flatMap(refreshDto -> authenticationService.refreshToken(refreshDto.refreshToken()))
                 .map(authenticationResponseMapper::toDto)
                 .doOnSuccess(response -> log.info(Constant.TOKEN_REFRESH_SUCCESS, correlationId))
                 .doOnError(error -> log.error(Constant.TOKEN_REFRESH_FAILED, correlationId, error))
-                .flatMap(authDto -> ServerResponse.ok().bodyValue(authDto))
-                .contextWrite(ctx -> ctx.put("correlationId", correlationId));
+                .flatMap(authDto -> ServerResponse.ok().bodyValue(authDto));
     }
 
-    public Mono<ServerResponse> logout(ServerRequest serverRequest) {
-        String correlationId = getCorrelationId(serverRequest);
-        log.info(Constant.LOGOUT_STARTED, correlationId);
-        
-        return serverRequest.bodyToMono(RefreshTokenRequestDto.class)
-                .doOnNext(this::validateDto)
-                .flatMap(refreshDto -> authenticationService.logout(refreshDto.refreshToken()))
-                .doOnSuccess(response -> log.info(Constant.LOGOUT_SUCCESS, correlationId))
-                .doOnError(error -> log.error(Constant.LOGOUT_FAILED, correlationId, error))
-                .then(ServerResponse.ok().build())
-                .contextWrite(ctx -> ctx.put("correlationId", correlationId));
-    }
 
     private <T> void validateDto(T dto) {
         var violations = validator.validate(dto);

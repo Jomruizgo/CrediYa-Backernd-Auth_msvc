@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
@@ -42,7 +43,10 @@ public class UserHandler extends UserApiDocs {
                 .doOnNext(dto -> log.debug(LogMessages.USER_CREATION_DATA_RECEIVED, correlationId, dto.email()))
                 .doOnNext(this::validateDto)
                 .map(userRequestMapper::toDomain)
-                .flatMap(userService::saveUser)
+                .flatMap(user -> ReactiveSecurityContextHolder.getContext()
+                        .map(ctx -> ctx.getAuthentication().getAuthorities().iterator().next().getAuthority())
+                        .map(authority -> authority.replace("ROLE_", ""))
+                        .flatMap(creatorRole -> userService.saveUser(user, creatorRole)))
                 .map(userResponseMapper::toDto)
                 .doOnSuccess(user -> log.info(LogMessages.USER_CREATION_SUCCESS, correlationId, user.id()))
                 .doOnError(error -> log.error(LogMessages.USER_CREATION_ERROR, correlationId, error))
@@ -54,7 +58,8 @@ public class UserHandler extends UserApiDocs {
         String correlationId = getCorrelationId(serverRequest);
         Long userId = Long.valueOf(serverRequest.pathVariable("id"));
         log.info(LogMessages.USER_SEARCH_BY_ID_STARTED, correlationId, userId);
-        return userService.findById(userId)
+        return Mono.just(userId)
+                .flatMap(userService::findById)
                 .map(userResponseMapper::toDto)
                 .doOnSuccess(user -> log.info(LogMessages.USER_SEARCH_BY_ID_SUCCESS, correlationId, user.id()))
                 .doOnError(error -> log.error(LogMessages.USER_SEARCH_BY_ID_ERROR, correlationId, error))
@@ -66,7 +71,8 @@ public class UserHandler extends UserApiDocs {
         String correlationId = getCorrelationId(serverRequest);
         String email = serverRequest.queryParam("email").orElse("");
         log.info(LogMessages.USER_SEARCH_BY_EMAIL_STARTED, correlationId, email);
-        return userService.findByEmail(email)
+        return Mono.just(email)
+                .flatMap(userService::findByEmail)
                 .map(userResponseMapper::toDto)
                 .doOnSuccess(user -> log.info(LogMessages.USER_SEARCH_BY_EMAIL_SUCCESS, correlationId, user.id()))
                 .doOnError(error -> log.error(LogMessages.USER_SEARCH_BY_EMAIL_ERROR, correlationId, error))
@@ -93,7 +99,8 @@ public class UserHandler extends UserApiDocs {
         String correlationId = getCorrelationId(serverRequest);
         Long userId = Long.valueOf(serverRequest.pathVariable("id"));
         log.info(LogMessages.USER_DELETE_STARTED, correlationId, userId);
-        return userService.deleteUser(userId)
+        return Mono.just(userId)
+                .flatMap(userService::deleteUser)
                 .doOnSuccess(unused -> log.info(LogMessages.USER_DELETE_SUCCESS, correlationId, userId))
                 .doOnError(error -> log.error(LogMessages.USER_DELETE_ERROR, correlationId, error))
                 .then(ServerResponse.noContent().build())
@@ -103,7 +110,8 @@ public class UserHandler extends UserApiDocs {
     public Mono<ServerResponse> getAllUsers(ServerRequest serverRequest) {
         String correlationId = getCorrelationId(serverRequest);
         log.info(LogMessages.USER_LIST_ALL_STARTED, correlationId);
-        return userService.findAllUsers()
+        return Mono.empty()
+                .thenMany(userService.findAllUsers())
                 .map(userResponseMapper::toDto)
                 .collectList()
                 .doOnSuccess(users -> log.info(LogMessages.USER_LIST_ALL_SUCCESS, correlationId, users.size()))

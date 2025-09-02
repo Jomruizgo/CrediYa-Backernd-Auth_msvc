@@ -5,6 +5,7 @@ import com.crediya.exception.UserAlreadyExistsException;
 import com.crediya.exception.UserNotFoundException;
 import com.crediya.gatewayPort.IPasswordEncoderPort;
 import com.crediya.gatewayPort.IUserPersistencePort;
+import com.crediya.model.Role;
 import com.crediya.model.User;
 import com.crediya.model.UserStatus;
 import com.crediya.servicePort.IUserService;
@@ -28,8 +29,9 @@ public class UserUseCase implements IUserService {
     }
 
     @Override
-    public Mono<User> saveUser(User user) {
-        return validateRequiredFields(user)
+    public Mono<User> saveUser(User user, String creatorRole) {
+        return validateUserCreationPermission(user, creatorRole)
+                .flatMap(this::validateRequiredFields)
                 .flatMap(this::validateEmailFormat)
                 .flatMap(this::validateSalaryRange)
                 .flatMap(validUser -> validateEmailNotExists(validUser.getEmail())
@@ -44,17 +46,21 @@ public class UserUseCase implements IUserService {
         if (id == null) {
             return Mono.error(new InvalidUserDataException(Constant.INVALID_ID));
         }
-        return userPersistencePort.findById(id)
+        return Mono.just(id)
+                .flatMap(userPersistencePort::findById)
                 .switchIfEmpty(Mono.error(new UserNotFoundException(id)));
     }
 
     @Override
     public Mono<User> findByEmail(String email) {
-        if (email == null || email.trim().isEmpty()) {
-            return Mono.error(new InvalidUserDataException(Constant.INVALID_EMAIL));
-        }
-        return userPersistencePort.findByEmail(email.trim().toLowerCase())
-                .switchIfEmpty(Mono.error(new UserNotFoundException(email)));
+        return Mono.fromSupplier(() -> {
+            if (email == null || email.trim().isEmpty()) {
+                throw new InvalidUserDataException(Constant.INVALID_EMAIL);
+            }
+            return email.trim().toLowerCase();
+        })
+        .flatMap(userPersistencePort::findByEmail)
+        .switchIfEmpty(Mono.error(new UserNotFoundException(email)));
     }
 
     @Override
@@ -62,7 +68,8 @@ public class UserUseCase implements IUserService {
         if (documentId == null || documentId.trim().isEmpty()) {
             return Mono.error(new InvalidUserDataException("Document ID is required for search"));
         }
-        return userPersistencePort.findByDocumentId(documentId.trim())
+        return Mono.just(documentId.trim())
+                .flatMap(userPersistencePort::findByDocumentId)
                 .switchIfEmpty(Mono.error(new UserNotFoundException("User with document ID " + documentId + " not found")));
     }
 
@@ -72,7 +79,8 @@ public class UserUseCase implements IUserService {
             return Mono.error(new InvalidUserDataException(Constant.INVALID_ID));
         }
         
-        return userPersistencePort.findById(id)
+        return Mono.just(id)
+                .flatMap(userPersistencePort::findById)
                 .switchIfEmpty(Mono.error(new UserNotFoundException(id)))
                 .then(validateRequiredFields(user))
                 .flatMap(this::validateEmailFormat)
@@ -103,14 +111,16 @@ public class UserUseCase implements IUserService {
             return Mono.error(new InvalidUserDataException(Constant.INVALID_ID));
         }
         
-        return userPersistencePort.findById(id)
+        return Mono.just(id)
+                .flatMap(userPersistencePort::findById)
                 .switchIfEmpty(Mono.error(new UserNotFoundException(id)))
                 .then(userPersistencePort.deleteById(id));
     }
 
     @Override
     public Flux<User> findAllUsers() {
-        return userPersistencePort.findAll();
+        return Mono.empty()
+                .thenMany(userPersistencePort.findAll());
     }
 
     private Mono<User> validateRequiredFields(User user) {
@@ -152,13 +162,15 @@ public class UserUseCase implements IUserService {
     }
 
     private Mono<Void> validateEmailNotExists(String email) {
-        return userPersistencePort.findByEmail(email)
+        return Mono.just(email)
+                .flatMap(userPersistencePort::findByEmail)
                 .flatMap(existingUser -> Mono.error(new UserAlreadyExistsException(email)))
                 .then();
     }
 
     private Mono<Void> validateEmailNotExistsForUpdate(String email, Long currentUserId) {
-        return userPersistencePort.findByEmail(email)
+        return Mono.just(email)
+                .flatMap(userPersistencePort::findByEmail)
                 .filter(existingUser -> !existingUser.getId().equals(currentUserId))
                 .flatMap(existingUser -> Mono.error(new UserAlreadyExistsException(email)))
                 .then();
@@ -170,7 +182,8 @@ public class UserUseCase implements IUserService {
             return Mono.empty();
         }
         
-        return userPersistencePort.findByDocumentId(documentId.trim())
+        return Mono.just(documentId.trim())
+                .flatMap(userPersistencePort::findByDocumentId)
                 .flatMap(existingUser -> Mono.error(UserAlreadyExistsException.forDocumentId(documentId)))
                 .then();
     }
@@ -181,7 +194,8 @@ public class UserUseCase implements IUserService {
             return Mono.empty();
         }
         
-        return userPersistencePort.findByDocumentId(documentId.trim())
+        return Mono.just(documentId.trim())
+                .flatMap(userPersistencePort::findByDocumentId)
                 .filter(existingUser -> !existingUser.getId().equals(currentUserId))
                 .flatMap(existingUser -> Mono.error(UserAlreadyExistsException.forDocumentId(documentId)))
                 .then();
@@ -191,6 +205,21 @@ public class UserUseCase implements IUserService {
         return value == null || value.trim().isEmpty();
     }
 
+    private Mono<User> validateUserCreationPermission(User userToCreate, String creatorRole) {
+        // Only ADMIN and SELLER can create users
+        if (!Role.ADMIN.name().equals(creatorRole) && !Role.SELLER.name().equals(creatorRole)) {
+            return Mono.error(new InvalidUserDataException(Constant.UNAUTHORIZED_USER_CREATION));
+        }
+        
+        // Only ADMIN can create SELLER or ADMIN users
+        if ((userToCreate.getRole() == Role.ADMIN || userToCreate.getRole() == Role.SELLER) 
+            && !Role.ADMIN.name().equals(creatorRole)) {
+            return Mono.error(new InvalidUserDataException(Constant.UNAUTHORIZED_ADMIN_CREATION));
+        }
+        
+        return Mono.just(userToCreate);
+    }
+    
     private User encryptPassword(User user) {
         // Only encrypt if password exists
         if (!user.hasCredentials()) {

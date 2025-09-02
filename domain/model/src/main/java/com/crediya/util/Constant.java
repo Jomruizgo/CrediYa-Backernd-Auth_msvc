@@ -24,10 +24,13 @@ public class Constant {
     public static final String INVALID_EMAIL_DUPLICATE = "Email is already registered by another user";
     public static final String INVALID_DOCUMENT_ID_DUPLICATE = "Document ID is already registered by another user";
     public static final String INVALID_USER_DATA = "Invalid user data";
+    public static final String UNAUTHORIZED_OPERATION = "User does not have permission to perform this operation";
     public static final String INVALID_ID = "ID cannot be null";
     public static final String INVALID_EMAIL = "Email cannot be null or empty";
     public static final String INVALID_EMAIL_FORMAT = "Email must have a valid format";
     public static final String INVALID_DOCUMENT_ID = "Document ID cannot be null or empty";
+    public static final String UNAUTHORIZED_USER_CREATION = "Only ADMIN and SELLER roles can create users";
+    public static final String UNAUTHORIZED_ADMIN_CREATION = "Only ADMIN can create SELLER or ADMIN users";
 
     // Success Messages
     public static final String USER_CREATED_SUCCESSFULLY = "User created successfully";
@@ -40,7 +43,7 @@ public class Constant {
     public static final String TOKEN_EXPIRED = "Token has expired";
     public static final String INVALID_REFRESH_TOKEN = "Invalid refresh token";
     public static final String AUTHENTICATION_FAILED = "Authentication failed";
-    public static final String LOGOUT_SUCCESSFUL = "Logout successful";
+    public static final String INSUFFICIENT_PRIVILEGES = "Insufficient privileges to perform this operation";
     public static final String TOKEN_REFRESHED_SUCCESSFULLY = "Token refreshed successfully";
 
     // Authentication Log Messages
@@ -50,16 +53,12 @@ public class Constant {
     public static final String TOKEN_REFRESH_STARTED = "Token refresh started for correlationId: {}";
     public static final String TOKEN_REFRESH_SUCCESS = "Token refresh successful for correlationId: {}";
     public static final String TOKEN_REFRESH_FAILED = "Token refresh failed for correlationId: {}";
-    public static final String LOGOUT_STARTED = "Logout started for correlationId: {}";
-    public static final String LOGOUT_SUCCESS = "Logout successful for correlationId: {}";
-    public static final String LOGOUT_FAILED = "Logout failed for correlationId: {}";
 
     // API Paths
     public static final String API_USER_PATH = "/api/v1/user";
     public static final String API_AUTH_PATH = "/api/v1/auth";
     public static final String API_AUTH_LOGIN_PATH = API_AUTH_PATH + "/login";
     public static final String API_AUTH_REFRESH_PATH = API_AUTH_PATH + "/refresh";
-    public static final String API_AUTH_LOGOUT_PATH = API_AUTH_PATH + "/logout";
     
     // DTO Validation Messages (Entry Point Layer)
     public static final String DTO_NAME_REQUIRED = "Name field is mandatory";

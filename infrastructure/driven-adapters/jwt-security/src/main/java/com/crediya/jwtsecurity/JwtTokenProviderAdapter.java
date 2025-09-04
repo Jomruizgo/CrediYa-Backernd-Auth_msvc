@@ -40,16 +40,14 @@ public class JwtTokenProviderAdapter implements ITokenProviderPort {
     @Override
     public AuthenticationToken generateAccessToken(User user) {
         Map<String, Object> claims = new HashMap<>();
-        claims.put("userId", user.getId());
         claims.put("role", user.getRole().name());
-        claims.put("name", user.getName());
         
         LocalDateTime expirationTime = LocalDateTime.now().plusMinutes(accessTokenValidityInMinutes);
         Date expirationDate = Date.from(expirationTime.atZone(ZoneId.systemDefault()).toInstant());
         
         String token = Jwts.builder()
                 .setClaims(claims)
-                .setSubject(user.getEmail())
+                .setSubject(user.getId().toString())
                 .setIssuedAt(new Date())
                 .setExpiration(expirationDate)
                 .signWith(secretKey, SignatureAlgorithm.HS512)
@@ -64,7 +62,7 @@ public class JwtTokenProviderAdapter implements ITokenProviderPort {
         Date expirationDate = Date.from(expirationTime.atZone(ZoneId.systemDefault()).toInstant());
         
         String token = Jwts.builder()
-                .setSubject(user.getEmail())
+                .setSubject(user.getId().toString())
                 .setIssuedAt(new Date())
                 .setExpiration(expirationDate)
                 .signWith(secretKey, SignatureAlgorithm.HS512)

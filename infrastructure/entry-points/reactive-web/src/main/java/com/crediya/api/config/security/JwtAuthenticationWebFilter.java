@@ -52,18 +52,24 @@ public class JwtAuthenticationWebFilter implements WebFilter {
     }
 
     private Mono<UsernamePasswordAuthenticationToken> authenticateToken(String token, ServerWebExchange exchange) {
-        String username = tokenProvider.extractUsername(token);
-        if (username != null) {
+        String userId = tokenProvider.extractUsername(token); // Actually contains userId
+        if (userId != null) {
             String correlationId = exchange.getRequest().getHeaders().getFirst("X-Correlation-ID");
-            return userService.findByEmail(username)
-                    .map(user -> {
-                        List<SimpleGrantedAuthority> authorities = List.of(
-                                new SimpleGrantedAuthority(SecurityMessages.ROLE_PREFIX + user.getRole().name())
-                        );
-                        return new UsernamePasswordAuthenticationToken(username, null, authorities);
-                    })
-                    .cast(UsernamePasswordAuthenticationToken.class)
-                    .contextWrite(ctx -> ctx.put("correlationId", correlationId));
+            try {
+                Long userIdLong = Long.valueOf(userId);
+                return userService.findById(userIdLong)
+                        .map(user -> {
+                            List<SimpleGrantedAuthority> authorities = List.of(
+                                    new SimpleGrantedAuthority(SecurityMessages.ROLE_PREFIX + user.getRole().name())
+                            );
+                            return new UsernamePasswordAuthenticationToken(user.getEmail(), null, authorities);
+                        })
+                        .cast(UsernamePasswordAuthenticationToken.class)
+                        .contextWrite(ctx -> ctx.put("correlationId", correlationId));
+            } catch (NumberFormatException e) {
+                log.debug("Invalid userId format in token: {}", userId);
+                return Mono.empty();
+            }
         }
         return Mono.empty();
     }

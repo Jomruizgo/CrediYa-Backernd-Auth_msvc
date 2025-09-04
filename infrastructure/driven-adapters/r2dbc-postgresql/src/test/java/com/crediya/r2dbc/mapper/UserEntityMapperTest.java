@@ -2,6 +2,7 @@ package com.crediya.r2dbc.mapper;
 
 import com.crediya.model.Role;
 import com.crediya.model.User;
+import com.crediya.model.UserStatus;
 import com.crediya.r2dbc.entity.UserEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,12 +28,15 @@ class UserEntityMapperTest {
             1L,
             "John",
             "Doe",
+            "12345678901",
             LocalDate.of(1990, 5, 15),
             "123 Main St",
             "1234567890",
             "john.doe@email.com",
+            "password123",
             new BigDecimal("2500000.00"),
-            Role.CLIENT
+            Role.CLIENT,
+            UserStatus.ACTIVE
         );
 
         UserEntity entity = mapper.toEntity(user);
@@ -86,9 +90,12 @@ class UserEntityMapperTest {
             null,
             null,
             null,
+            null,
             "john.doe@email.com",
+            null,
             new BigDecimal("2500000.00"),
-            Role.CLIENT
+            Role.CLIENT,
+            UserStatus.ACTIVE
         );
 
         UserEntity entity = mapper.toEntity(user);
@@ -136,9 +143,9 @@ class UserEntityMapperTest {
     @Test
     void shouldMapAllRoles() {
         for (Role role : Role.values()) {
-            User user = new User(1L, "Test", "User", LocalDate.now(),
+            User user = new User(1L, "Test", "User", "123456789", LocalDate.now(),
                                "Address", "Phone", "test@email.com",
-                               new BigDecimal("2500000"), role);
+                               "password123", new BigDecimal("2500000"), role, UserStatus.ACTIVE);
 
             UserEntity entity = mapper.toEntity(user);
             assertEquals(role, entity.getRole());
@@ -154,12 +161,15 @@ class UserEntityMapperTest {
             42L,
             "Original",
             "User",
+            "987654321",
             LocalDate.of(1992, 12, 25),
             "Original Address",
             "555-0123",
             "original@email.com",
+            "password456",
             new BigDecimal("4500000.50"),
-            Role.SELLER
+            Role.SELLER,
+            UserStatus.ACTIVE
         );
 
         UserEntity entity = mapper.toEntity(originalUser);

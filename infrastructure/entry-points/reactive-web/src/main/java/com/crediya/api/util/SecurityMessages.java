@@ -1,4 +1,4 @@
-package com.crediya.api.security.util;
+package com.crediya.api.util;
 
 public class SecurityMessages {
     

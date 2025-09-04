@@ -206,6 +206,11 @@ public class UserUseCase implements IUserService {
     }
 
     private Mono<User> validateUserCreationPermission(User userToCreate, String creatorRole) {
+        // First check if user is null
+        if (userToCreate == null) {
+            return Mono.error(new InvalidUserDataException(Constant.INVALID_USER_DATA));
+        }
+        
         // Only ADMIN and SELLER can create users
         if (!Role.ADMIN.name().equals(creatorRole) && !Role.SELLER.name().equals(creatorRole)) {
             return Mono.error(new InvalidUserDataException(Constant.UNAUTHORIZED_USER_CREATION));

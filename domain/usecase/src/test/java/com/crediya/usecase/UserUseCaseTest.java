@@ -3,9 +3,11 @@ package com.crediya.usecase;
 import com.crediya.exception.InvalidUserDataException;
 import com.crediya.exception.UserAlreadyExistsException;
 import com.crediya.exception.UserNotFoundException;
+import com.crediya.gatewayPort.IPasswordEncoderPort;
 import com.crediya.gatewayPort.IUserPersistencePort;
 import com.crediya.model.Role;
 import com.crediya.model.User;
+import com.crediya.model.UserStatus;
 import com.crediya.util.Constant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -32,6 +34,9 @@ class UserUseCaseTest {
 
     @Mock
     private IUserPersistencePort userPersistencePort;
+    
+    @Mock
+    private IPasswordEncoderPort passwordEncoder;
 
     private UserUseCase userUseCase;
     private User validUser;
@@ -39,7 +44,7 @@ class UserUseCaseTest {
 
     @BeforeEach
     void setUp() {
-        userUseCase = new UserUseCase(userPersistencePort);
+        userUseCase = new UserUseCase(userPersistencePort, passwordEncoder);
         
         validUser = new User(
             null,
@@ -50,8 +55,10 @@ class UserUseCaseTest {
             "Calle 123",
             "1234567890",
             "juan.perez@email.com",
+            "password123",
             new BigDecimal("2000000"),
-            Role.CLIENT
+            Role.CLIENT,
+            UserStatus.ACTIVE
         );
         
         existingUser = new User(
@@ -63,8 +70,10 @@ class UserUseCaseTest {
             "Calle 123",
             "1234567890",
             "juan.perez@email.com",
+            "encodedPassword",
             new BigDecimal("2000000"),
-            Role.CLIENT
+            Role.CLIENT,
+            UserStatus.ACTIVE
         );
     }
 
@@ -73,16 +82,102 @@ class UserUseCaseTest {
     class SaveUserTests {
 
         @Test
-        @DisplayName("Should save user successfully when all validations pass")
-        void shouldSaveUserSuccessfully() {
+        @DisplayName("Should save user successfully when ADMIN creates CLIENT")
+        void shouldSaveUserSuccessfullyWhenAdminCreatesClient() {
             // Given
             when(userPersistencePort.findByEmail(anyString())).thenReturn(Mono.empty());
             when(userPersistencePort.findByDocumentId(anyString())).thenReturn(Mono.empty());
+            when(passwordEncoder.encode(anyString())).thenReturn("encodedPassword");
             when(userPersistencePort.save(any(User.class))).thenReturn(Mono.just(existingUser));
 
             // When & Then
-            StepVerifier.create(userUseCase.saveUser(validUser))
+            StepVerifier.create(userUseCase.saveUser(validUser, "ADMIN"))
                 .expectNext(existingUser)
+                .verifyComplete();
+        }
+        
+        @Test
+        @DisplayName("Should save user successfully when SELLER creates CLIENT")
+        void shouldSaveUserSuccessfullyWhenSellerCreatesClient() {
+            // Given
+            when(userPersistencePort.findByEmail(anyString())).thenReturn(Mono.empty());
+            when(userPersistencePort.findByDocumentId(anyString())).thenReturn(Mono.empty());
+            when(passwordEncoder.encode(anyString())).thenReturn("encodedPassword");
+            when(userPersistencePort.save(any(User.class))).thenReturn(Mono.just(existingUser));
+
+            // When & Then
+            StepVerifier.create(userUseCase.saveUser(validUser, "SELLER"))
+                .expectNext(existingUser)
+                .verifyComplete();
+        }
+        
+        @Test
+        @DisplayName("Should throw exception when CLIENT tries to create user")
+        void shouldThrowExceptionWhenClientTriesToCreateUser() {
+            // When & Then
+            StepVerifier.create(userUseCase.saveUser(validUser, "CLIENT"))
+                .expectErrorMatches(ex -> ex instanceof InvalidUserDataException &&
+                    ex.getMessage().equals(Constant.UNAUTHORIZED_USER_CREATION))
+                .verify();
+        }
+        
+        @Test
+        @DisplayName("Should throw exception when SELLER tries to create ADMIN")
+        void shouldThrowExceptionWhenSellerTriesToCreateAdmin() {
+            // Given
+            User adminUser = new User(
+                null, "Admin", "User", "99999999999", LocalDate.now(),
+                "Address", "123456789", "admin@email.com", "password",
+                new BigDecimal("5000000"), Role.ADMIN, UserStatus.ACTIVE
+            );
+
+            // When & Then
+            StepVerifier.create(userUseCase.saveUser(adminUser, "SELLER"))
+                .expectErrorMatches(ex -> ex instanceof InvalidUserDataException &&
+                    ex.getMessage().equals(Constant.UNAUTHORIZED_ADMIN_CREATION))
+                .verify();
+        }
+        
+        @Test
+        @DisplayName("Should throw exception when SELLER tries to create another SELLER")
+        void shouldThrowExceptionWhenSellerTriesToCreateSeller() {
+            // Given
+            User sellerUser = new User(
+                null, "Seller", "User", "88888888888", LocalDate.now(),
+                "Address", "123456789", "seller@email.com", "password",
+                new BigDecimal("3000000"), Role.SELLER, UserStatus.ACTIVE
+            );
+
+            // When & Then
+            StepVerifier.create(userUseCase.saveUser(sellerUser, "SELLER"))
+                .expectErrorMatches(ex -> ex instanceof InvalidUserDataException &&
+                    ex.getMessage().equals(Constant.UNAUTHORIZED_ADMIN_CREATION))
+                .verify();
+        }
+        
+        @Test
+        @DisplayName("Should allow ADMIN to create ADMIN")
+        void shouldAllowAdminToCreateAdmin() {
+            // Given
+            User adminUser = new User(
+                null, "Admin", "User", "77777777777", LocalDate.now(),
+                "Address", "123456789", "admin2@email.com", "password",
+                new BigDecimal("5000000"), Role.ADMIN, UserStatus.ACTIVE
+            );
+            User savedAdmin = new User(
+                2L, "Admin", "User", "77777777777", LocalDate.now(),
+                "Address", "123456789", "admin2@email.com", "encodedPassword",
+                new BigDecimal("5000000"), Role.ADMIN, UserStatus.ACTIVE
+            );
+            
+            when(userPersistencePort.findByEmail(anyString())).thenReturn(Mono.empty());
+            when(userPersistencePort.findByDocumentId(anyString())).thenReturn(Mono.empty());
+            when(passwordEncoder.encode(anyString())).thenReturn("encodedPassword");
+            when(userPersistencePort.save(any(User.class))).thenReturn(Mono.just(savedAdmin));
+
+            // When & Then
+            StepVerifier.create(userUseCase.saveUser(adminUser, "ADMIN"))
+                .expectNext(savedAdmin)
                 .verifyComplete();
         }
 
@@ -90,7 +185,7 @@ class UserUseCaseTest {
         @DisplayName("Should throw InvalidUserDataException when user is null")
         void shouldThrowExceptionWhenUserIsNull() {
             // When & Then
-            StepVerifier.create(userUseCase.saveUser(null))
+            StepVerifier.create(userUseCase.saveUser(null, "ADMIN"))
                 .expectError(InvalidUserDataException.class)
                 .verify();
         }
@@ -101,12 +196,12 @@ class UserUseCaseTest {
             // Given
             User userWithNullName = new User(
                 null, null, "Pérez", "12345678901", LocalDate.now(),
-                "Address", "123456789", "test@email.com",
-                new BigDecimal("2000000"), Role.CLIENT
+                "Address", "123456789", "test@email.com", "password",
+                new BigDecimal("2000000"), Role.CLIENT, UserStatus.ACTIVE
             );
 
             // When & Then
-            StepVerifier.create(userUseCase.saveUser(userWithNullName))
+            StepVerifier.create(userUseCase.saveUser(userWithNullName, "ADMIN"))
                 .expectErrorMatches(ex -> ex instanceof InvalidUserDataException &&
                     ex.getMessage().equals(Constant.INVALID_REQUIRED_FIELDS))
                 .verify();
@@ -118,12 +213,12 @@ class UserUseCaseTest {
             // Given
             User userWithEmptyName = new User(
                 null, "   ", "Pérez", "12345678901", LocalDate.now(),
-                "Address", "123456789", "test@email.com",
-                new BigDecimal("2000000"), Role.CLIENT
+                "Address", "123456789", "test@email.com", "password",
+                new BigDecimal("2000000"), Role.CLIENT, UserStatus.ACTIVE
             );
 
             // When & Then
-            StepVerifier.create(userUseCase.saveUser(userWithEmptyName))
+            StepVerifier.create(userUseCase.saveUser(userWithEmptyName, "ADMIN"))
                 .expectErrorMatches(ex -> ex instanceof InvalidUserDataException &&
                     ex.getMessage().equals(Constant.INVALID_REQUIRED_FIELDS))
                 .verify();
@@ -135,12 +230,12 @@ class UserUseCaseTest {
             // Given
             User userWithNullLastName = new User(
                 null, "Juan", null, "12345678901", LocalDate.now(),
-                "Address", "123456789", "test@email.com",
-                new BigDecimal("2000000"), Role.CLIENT
+                "Address", "123456789", "test@email.com", "password",
+                new BigDecimal("2000000"), Role.CLIENT, UserStatus.ACTIVE
             );
 
             // When & Then
-            StepVerifier.create(userUseCase.saveUser(userWithNullLastName))
+            StepVerifier.create(userUseCase.saveUser(userWithNullLastName, "ADMIN"))
                 .expectErrorMatches(ex -> ex instanceof InvalidUserDataException &&
                     ex.getMessage().equals(Constant.INVALID_REQUIRED_FIELDS))
                 .verify();
@@ -152,12 +247,12 @@ class UserUseCaseTest {
             // Given
             User userWithNullEmail = new User(
                 null, "Juan", "Pérez", "12345678901", LocalDate.now(),
-                "Address", "123456789", null,
-                new BigDecimal("2000000"), Role.CLIENT
+                "Address", "123456789", null, "password",
+                new BigDecimal("2000000"), Role.CLIENT, UserStatus.ACTIVE
             );
 
             // When & Then
-            StepVerifier.create(userUseCase.saveUser(userWithNullEmail))
+            StepVerifier.create(userUseCase.saveUser(userWithNullEmail, "ADMIN"))
                 .expectErrorMatches(ex -> ex instanceof InvalidUserDataException &&
                     ex.getMessage().equals(Constant.INVALID_REQUIRED_FIELDS))
                 .verify();
@@ -169,12 +264,12 @@ class UserUseCaseTest {
             // Given
             User userWithNullSalary = new User(
                 null, "Juan", "Pérez", "12345678901", LocalDate.now(),
-                "Address", "123456789", "test@email.com",
-                null, Role.CLIENT
+                "Address", "123456789", "test@email.com", "password",
+                null, Role.CLIENT, UserStatus.ACTIVE
             );
 
             // When & Then
-            StepVerifier.create(userUseCase.saveUser(userWithNullSalary))
+            StepVerifier.create(userUseCase.saveUser(userWithNullSalary, "ADMIN"))
                 .expectErrorMatches(ex -> ex instanceof InvalidUserDataException &&
                     ex.getMessage().equals(Constant.INVALID_REQUIRED_FIELDS))
                 .verify();
@@ -186,12 +281,12 @@ class UserUseCaseTest {
             // Given
             User userWithInvalidEmail = new User(
                 null, "Juan", "Pérez", "12345678901", LocalDate.now(),
-                "Address", "123456789", "invalid-email",
-                new BigDecimal("2000000"), Role.CLIENT
+                "Address", "123456789", "invalid-email", "password",
+                new BigDecimal("2000000"), Role.CLIENT, UserStatus.ACTIVE
             );
 
             // When & Then
-            StepVerifier.create(userUseCase.saveUser(userWithInvalidEmail))
+            StepVerifier.create(userUseCase.saveUser(userWithInvalidEmail, "ADMIN"))
                 .expectErrorMatches(ex -> ex instanceof InvalidUserDataException &&
                     ex.getMessage().equals(Constant.INVALID_EMAIL_FORMAT))
                 .verify();
@@ -203,12 +298,12 @@ class UserUseCaseTest {
             // Given
             User userWithLowSalary = new User(
                 null, "Juan", "Pérez", "12345678901", LocalDate.now(),
-                "Address", "123456789", "test@email.com",
-                new BigDecimal("-1"), Role.CLIENT
+                "Address", "123456789", "test@email.com", "password",
+                new BigDecimal("-1"), Role.CLIENT, UserStatus.ACTIVE
             );
 
             // When & Then
-            StepVerifier.create(userUseCase.saveUser(userWithLowSalary))
+            StepVerifier.create(userUseCase.saveUser(userWithLowSalary, "ADMIN"))
                 .expectErrorMatches(ex -> ex instanceof InvalidUserDataException &&
                     ex.getMessage().equals(Constant.INVALID_SALARY_RANGE))
                 .verify();
@@ -220,12 +315,12 @@ class UserUseCaseTest {
             // Given
             User userWithHighSalary = new User(
                 null, "Juan", "Pérez", "12345678901", LocalDate.now(),
-                "Address", "123456789", "test@email.com",
-                new BigDecimal("20000000"), Role.CLIENT
+                "Address", "123456789", "test@email.com", "password",
+                new BigDecimal("20000000"), Role.CLIENT, UserStatus.ACTIVE
             );
 
             // When & Then
-            StepVerifier.create(userUseCase.saveUser(userWithHighSalary))
+            StepVerifier.create(userUseCase.saveUser(userWithHighSalary, "ADMIN"))
                 .expectErrorMatches(ex -> ex instanceof InvalidUserDataException &&
                     ex.getMessage().equals(Constant.INVALID_SALARY_RANGE))
                 .verify();
@@ -236,10 +331,9 @@ class UserUseCaseTest {
         void shouldThrowExceptionWhenEmailAlreadyExists() {
             // Given
             when(userPersistencePort.findByEmail(anyString())).thenReturn(Mono.just(existingUser));
-            when(userPersistencePort.findByDocumentId(anyString())).thenReturn(Mono.empty());
 
             // When & Then
-            StepVerifier.create(userUseCase.saveUser(validUser))
+            StepVerifier.create(userUseCase.saveUser(validUser, "ADMIN"))
                 .expectError(UserAlreadyExistsException.class)
                 .verify();
         }
@@ -250,15 +344,16 @@ class UserUseCaseTest {
             // Given
             User userWithNullDocumentId = new User(
                 null, "Juan", "Pérez", null, LocalDate.now(),
-                "Address", "123456789", "test@email.com",
-                new BigDecimal("2000000"), Role.CLIENT
+                "Address", "123456789", "test@email.com", "password",
+                new BigDecimal("2000000"), Role.CLIENT, UserStatus.ACTIVE
             );
             
             when(userPersistencePort.findByEmail(anyString())).thenReturn(Mono.empty());
+            when(passwordEncoder.encode(anyString())).thenReturn("encodedPassword");
             when(userPersistencePort.save(any(User.class))).thenReturn(Mono.just(userWithNullDocumentId));
 
             // When & Then
-            StepVerifier.create(userUseCase.saveUser(userWithNullDocumentId))
+            StepVerifier.create(userUseCase.saveUser(userWithNullDocumentId, "ADMIN"))
                 .expectNext(userWithNullDocumentId)
                 .verifyComplete();
         }
@@ -269,15 +364,16 @@ class UserUseCaseTest {
             // Given
             User userWithEmptyDocumentId = new User(
                 null, "Juan", "Pérez", "   ", LocalDate.now(),
-                "Address", "123456789", "test@email.com",
-                new BigDecimal("2000000"), Role.CLIENT
+                "Address", "123456789", "test@email.com", "password",
+                new BigDecimal("2000000"), Role.CLIENT, UserStatus.ACTIVE
             );
             
             when(userPersistencePort.findByEmail(anyString())).thenReturn(Mono.empty());
+            when(passwordEncoder.encode(anyString())).thenReturn("encodedPassword");
             when(userPersistencePort.save(any(User.class))).thenReturn(Mono.just(userWithEmptyDocumentId));
 
             // When & Then
-            StepVerifier.create(userUseCase.saveUser(userWithEmptyDocumentId))
+            StepVerifier.create(userUseCase.saveUser(userWithEmptyDocumentId, "ADMIN"))
                 .expectNext(userWithEmptyDocumentId)
                 .verifyComplete();
         }
@@ -290,7 +386,7 @@ class UserUseCaseTest {
             when(userPersistencePort.findByDocumentId("12345678901")).thenReturn(Mono.just(existingUser));
 
             // When & Then
-            StepVerifier.create(userUseCase.saveUser(validUser))
+            StepVerifier.create(userUseCase.saveUser(validUser, "ADMIN"))
                 .expectErrorMatches(ex -> ex instanceof UserAlreadyExistsException &&
                     ex.getMessage().contains("Document ID 12345678901 is already registered"))
                 .verify();
@@ -456,8 +552,8 @@ class UserUseCaseTest {
             // Given
             User updatedUser = new User(
                 1L, "Juan Updated", "Pérez Updated", "99999999999", LocalDate.now(),
-                "New Address", "987654321", "juan.updated@email.com",
-                new BigDecimal("3000000"), Role.ADMIN
+                "New Address", "987654321", "juan.updated@email.com", "newPassword",
+                new BigDecimal("3000000"), Role.ADMIN, UserStatus.ACTIVE
             );
             
             when(userPersistencePort.findById(1L)).thenReturn(Mono.just(existingUser));
@@ -468,8 +564,8 @@ class UserUseCaseTest {
             // When & Then
             StepVerifier.create(userUseCase.updateUser(1L, new User(
                 null, "Juan Updated", "Pérez Updated", "99999999999", LocalDate.now(),
-                "New Address", "987654321", "juan.updated@email.com",
-                new BigDecimal("3000000"), Role.ADMIN
+                "New Address", "987654321", "juan.updated@email.com", "newPassword",
+                new BigDecimal("3000000"), Role.ADMIN, UserStatus.ACTIVE
             )))
                 .expectNext(updatedUser)
                 .verifyComplete();
@@ -518,13 +614,12 @@ class UserUseCaseTest {
             // Given
             User anotherUser = new User(
                 2L, "Another", "User", "99999999999", LocalDate.now(),
-                "Address", "123456789", "juan.perez@email.com",
-                new BigDecimal("2000000"), Role.CLIENT
+                "Address", "123456789", "juan.perez@email.com", "password",
+                new BigDecimal("2000000"), Role.CLIENT, UserStatus.ACTIVE
             );
             
             when(userPersistencePort.findById(1L)).thenReturn(Mono.just(existingUser));
             when(userPersistencePort.findByEmail("juan.perez@email.com")).thenReturn(Mono.just(anotherUser));
-            when(userPersistencePort.findByDocumentId("12345678901")).thenReturn(Mono.empty());
 
             // When & Then
             StepVerifier.create(userUseCase.updateUser(1L, validUser))
@@ -538,8 +633,8 @@ class UserUseCaseTest {
             // Given
             User userWithNullDocumentId = new User(
                 null, "Juan", "Pérez", null, LocalDate.now(),
-                "Address", "123456789", "test@email.com",
-                new BigDecimal("2000000"), Role.CLIENT
+                "Address", "123456789", "test@email.com", "password",
+                new BigDecimal("2000000"), Role.CLIENT, UserStatus.ACTIVE
             );
             
             when(userPersistencePort.findById(1L)).thenReturn(Mono.just(existingUser));
@@ -558,8 +653,8 @@ class UserUseCaseTest {
             // Given
             User anotherUser = new User(
                 2L, "Another", "User", "12345678901", LocalDate.now(),
-                "Address", "123456789", "another@email.com",
-                new BigDecimal("2000000"), Role.CLIENT
+                "Address", "123456789", "another@email.com", "password",
+                new BigDecimal("2000000"), Role.CLIENT, UserStatus.ACTIVE
             );
             
             when(userPersistencePort.findById(1L)).thenReturn(Mono.just(existingUser));
@@ -621,8 +716,8 @@ class UserUseCaseTest {
         @DisplayName("Should return all users successfully")
         void shouldReturnAllUsersSuccessfully() {
             // Given
-            User user1 = new User(1L, "Juan", "Pérez", "11111111111", LocalDate.now(), "Address", "123", "juan@email.com", new BigDecimal("2000000"), Role.CLIENT);
-            User user2 = new User(2L, "Ana", "García", "22222222222", LocalDate.now(), "Address", "456", "ana@email.com", new BigDecimal("3000000"), Role.ADMIN);
+            User user1 = new User(1L, "Juan", "Pérez", "11111111111", LocalDate.now(), "Address", "123", "juan@email.com", "password", new BigDecimal("2000000"), Role.CLIENT, UserStatus.ACTIVE);
+            User user2 = new User(2L, "Ana", "García", "22222222222", LocalDate.now(), "Address", "456", "ana@email.com", "password", new BigDecimal("3000000"), Role.ADMIN, UserStatus.ACTIVE);
             
             when(userPersistencePort.findAll()).thenReturn(Flux.just(user1, user2));
 

@@ -1,6 +1,6 @@
-package com.crediya.api.security;
+package com.crediya.api.config.security;
 
-import com.crediya.api.security.util.SecurityMessages;
+import com.crediya.api.util.SecurityMessages;
 import com.crediya.gatewayPort.ITokenProviderPort;
 import com.crediya.servicePort.IUserService;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +17,6 @@ import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
-import java.util.UUID;
 
 @Slf4j
 @Component
@@ -55,7 +54,7 @@ public class JwtAuthenticationWebFilter implements WebFilter {
     private Mono<UsernamePasswordAuthenticationToken> authenticateToken(String token, ServerWebExchange exchange) {
         String username = tokenProvider.extractUsername(token);
         if (username != null) {
-            String correlationId = getCorrelationId(exchange.getRequest());
+            String correlationId = exchange.getRequest().getHeaders().getFirst("X-Correlation-ID");
             return userService.findByEmail(username)
                     .map(user -> {
                         List<SimpleGrantedAuthority> authorities = List.of(
@@ -69,11 +68,4 @@ public class JwtAuthenticationWebFilter implements WebFilter {
         return Mono.empty();
     }
     
-    private String getCorrelationId(ServerHttpRequest request) {
-        String correlationId = request.getHeaders().getFirst("X-Correlation-ID");
-        if (correlationId == null || correlationId.isEmpty()) {
-            correlationId = UUID.randomUUID().toString().substring(0, 8);
-        }
-        return correlationId;
-    }
 }

@@ -1,5 +1,6 @@
-package com.crediya.api.config;
+package com.crediya.api.config.security;
 
+import org.springframework.core.Ordered;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
@@ -8,7 +9,7 @@ import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
 @Component
-public class SecurityHeadersConfig implements WebFilter {
+public class SecurityHeadersConfig implements WebFilter, Ordered {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
@@ -21,5 +22,10 @@ public class SecurityHeadersConfig implements WebFilter {
         headers.set("Pragma", "no-cache");
         headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
         return chain.filter(exchange);
+    }
+
+    @Override
+    public int getOrder() {
+        return Ordered.LOWEST_PRECEDENCE; // Execute LAST
     }
 }

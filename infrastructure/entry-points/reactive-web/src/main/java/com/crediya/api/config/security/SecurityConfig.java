@@ -1,4 +1,4 @@
-package com.crediya.api.security;
+package com.crediya.api.config.security;
 
 import com.crediya.util.Constant;
 import lombok.RequiredArgsConstructor;

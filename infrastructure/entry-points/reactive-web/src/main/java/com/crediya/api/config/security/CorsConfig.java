@@ -1,4 +1,4 @@
-package com.crediya.api.config;
+package com.crediya.api.config.security;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;

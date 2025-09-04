@@ -38,6 +38,8 @@ public class AuthenticationUseCase implements IAuthenticationService {
             .filter(User::canLogin)  // Check status ACTIVE + has credentials
             .filter(user -> passwordEncoder.matches(password, user.getPassword()))
             .switchIfEmpty(Mono.error(new InvalidCredentialsException(Constant.INVALID_CREDENTIALS)))
+            .onErrorMap(UserNotFoundException.class, 
+                ex -> new InvalidCredentialsException(Constant.INVALID_CREDENTIALS))
             .flatMap(this::generateTokensForUser);
     }
 

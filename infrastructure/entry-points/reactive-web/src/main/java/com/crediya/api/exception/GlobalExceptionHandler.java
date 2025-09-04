@@ -1,5 +1,6 @@
 package com.crediya.api.exception;
 
+import com.crediya.api.util.CorrelationIdUtil;
 import com.crediya.exception.InvalidCredentialsException;
 import com.crediya.exception.InvalidUserDataException;
 import com.crediya.exception.UserAlreadyExistsException;
@@ -18,7 +19,6 @@ import reactor.core.publisher.Mono;
 import jakarta.validation.ConstraintViolationException;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
@@ -133,10 +133,7 @@ public class GlobalExceptionHandler {
     }
     
     private String getCorrelationId(ServerWebExchange exchange) {
-        String correlationId = exchange.getRequest().getHeaders().getFirst("X-Correlation-ID");
-        if (correlationId == null || correlationId.isEmpty()) {
-            correlationId = UUID.randomUUID().toString().substring(0, 8);
-        }
-        return correlationId;
+        // Correlation ID is guaranteed to be present thanks to CorrelationIdFilter
+        return exchange.getRequest().getHeaders().getFirst("X-Correlation-ID");
     }
 }

@@ -2,6 +2,7 @@ package com.crediya.r2dbc.adapter;
 
 import com.crediya.model.Role;
 import com.crediya.model.User;
+import com.crediya.model.UserStatus;
 import com.crediya.r2dbc.entity.UserEntity;
 import com.crediya.r2dbc.mapper.UserEntityMapper;
 import com.crediya.r2dbc.repository.UserR2dbcRepository;
@@ -45,9 +46,9 @@ class UserPersistenceAdapterTest {
     void setUp() {
         userPersistenceAdapter = new UserPersistenceAdapter(userRepository, userMapper, transactionalOperator);
         
-        testUser = new User(1L, "John", "Doe", LocalDate.of(1990, 5, 15),
+        testUser = new User(1L, "John", "Doe", "12345678901", LocalDate.of(1990, 5, 15),
                            "123 Main St", "1234567890", "john.doe@email.com",
-                           new BigDecimal("2500000"), Role.CLIENT);
+                           "password123", new BigDecimal("2500000"), Role.CLIENT, UserStatus.ACTIVE);
         
         testUserEntity = new UserEntity();
         testUserEntity.setId(1L);
@@ -154,9 +155,9 @@ class UserPersistenceAdapterTest {
 
     @Test
     void shouldFindAllUsers() {
-        User anotherUser = new User(2L, "Jane", "Smith", LocalDate.of(1985, 8, 20),
+        User anotherUser = new User(2L, "Jane", "Smith", "98765432109", LocalDate.of(1985, 8, 20),
                                    "456 Oak St", "0987654321", "jane.smith@email.com",
-                                   new BigDecimal("3000000"), Role.ADMIN);
+                                   "password456", new BigDecimal("3000000"), Role.ADMIN, UserStatus.ACTIVE);
         
         UserEntity anotherUserEntity = new UserEntity();
         anotherUserEntity.setId(2L);

@@ -31,4 +31,9 @@ public final class LogMessages {
     public static final String USER_LIST_ALL_STARTED = "[CREDIYA-{}] Starting to list all users";
     public static final String USER_LIST_ALL_SUCCESS = "[CREDIYA-{}] User listing completed. Total: {}";
     public static final String USER_LIST_ALL_ERROR = "[CREDIYA-{}] Error listing users";
+    
+    // Correlation ID Filter Messages
+    public static final String CORRELATION_ID_PROCESSING = "[CREDIYA-{}] Processing request with correlation ID";
+    public static final String CORRELATION_ID_GENERATED = "[CREDIYA-{}] Generated new correlation ID";
+    public static final String CORRELATION_ID_FROM_HEADER = "[CREDIYA-{}] Using existing correlation ID from header";
 }

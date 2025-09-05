@@ -1,6 +1,5 @@
 package com.crediya.api.dto.request;
 
-import com.crediya.model.Role;
 import com.crediya.util.Constant;
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
@@ -31,5 +30,5 @@ public record UpdateUserRequestDto(
     BigDecimal baseSalary,
     
     @NotNull(message = Constant.DTO_ROLE_REQUIRED)
-    Role role
+    String role
 ) {}

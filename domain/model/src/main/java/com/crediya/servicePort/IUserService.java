@@ -9,7 +9,7 @@ public interface IUserService {
     Mono<User> findById(Long id);
     Mono<User> findByEmail(String email);
     Mono<User> findByDocumentId(String documentId);
-    Mono<User> updateUser(Long id, User user);
+    Mono<User> updateUser(Long id, User user, String updaterRole);
     Mono<Void> deleteUser(Long id);
     Flux<User> findAllUsers();
 }

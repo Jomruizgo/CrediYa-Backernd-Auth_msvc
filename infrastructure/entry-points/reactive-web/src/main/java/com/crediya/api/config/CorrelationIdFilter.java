@@ -58,6 +58,6 @@ public class CorrelationIdFilter implements WebFilter, Ordered {
 
     @Override
     public int getOrder() {
-        return Ordered.HIGHEST_PRECEDENCE; // Ejecutar PRIMERO
+        return Ordered.HIGHEST_PRECEDENCE;
     }
 }

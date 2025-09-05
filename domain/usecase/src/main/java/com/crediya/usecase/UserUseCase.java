@@ -74,7 +74,7 @@ public class UserUseCase implements IUserService {
     }
 
     @Override
-    public Mono<User> updateUser(Long id, User user) {
+    public Mono<User> updateUser(Long id, User user, String updaterRole) {
         if (id == null) {
             return Mono.error(new InvalidUserDataException(Constant.INVALID_ID));
         }
@@ -82,26 +82,29 @@ public class UserUseCase implements IUserService {
         return Mono.just(id)
                 .flatMap(userPersistencePort::findById)
                 .switchIfEmpty(Mono.error(new UserNotFoundException(id)))
-                .then(validateRequiredFields(user))
-                .flatMap(this::validateEmailFormat)
-                .flatMap(this::validateSalaryRange)
-                .flatMap(validUser -> validateEmailNotExistsForUpdate(validUser.getEmail(), id)
-                        .then(validateDocumentIdNotExistsForUpdate(validUser.getDocumentId(), id))
-                        .then(Mono.just(validUser)))
-                .map(validUser -> new User(
-                        id, 
-                        validUser.getName(), 
-                        validUser.getLastName(), 
-                        validUser.getDocumentId(),
-                        validUser.getBirthDate(),
-                        validUser.getAddress(), 
-                        validUser.getPhoneNumber(), 
-                        validUser.getEmail(),
-                        validUser.getPassword(),
-                        validUser.getBaseSalary(),
-                        validUser.getRole(),
-                        validUser.getStatus()
-                ))
+                .flatMap(existingUser ->
+                        validateUserUpdatePermission(existingUser, updaterRole)
+                                .then(validateRequiredFields(user))
+                                .flatMap(this::validateEmailFormat)
+                                .flatMap(this::validateSalaryRange)
+                                .flatMap(validUser -> validateEmailNotExistsForUpdate(validUser.getEmail(), id)
+                                        .then(validateDocumentIdNotExistsForUpdate(validUser.getDocumentId(), id))
+                                        .then(Mono.just(validUser)))
+                                .map(validUser -> new User(
+                                        id,
+                                        validUser.getName(),
+                                        validUser.getLastName(),
+                                        validUser.getDocumentId(),
+                                        validUser.getBirthDate(),
+                                        validUser.getAddress(),
+                                        validUser.getPhoneNumber(),
+                                        validUser.getEmail(),
+                                        existingUser.getPassword(),
+                                        validUser.getBaseSalary(),
+                                        existingUser.getRole(),
+                                        existingUser.getStatus()
+                                ))
+                )
                 .flatMap(userPersistencePort::update);
     }
 
@@ -131,8 +134,7 @@ public class UserUseCase implements IUserService {
         if (isNullOrEmpty(user.getName()) || 
             isNullOrEmpty(user.getLastName()) || 
             isNullOrEmpty(user.getEmail()) ||
-            user.getBaseSalary() == null ||
-            user.getStatus() == null) {
+            user.getBaseSalary() == null ) {
             return Mono.error(new InvalidUserDataException(Constant.INVALID_REQUIRED_FIELDS));
         }
         
@@ -223,6 +225,24 @@ public class UserUseCase implements IUserService {
         }
         
         return Mono.just(userToCreate);
+    }
+
+    private Mono<Void> validateUserUpdatePermission(User existingUser, String updaterRole) {
+        // Only ADMIN and SELLER can update CLIENT users
+        if (existingUser.getRole() == Role.CLIENT) {
+            if (!Role.ADMIN.name().equals(updaterRole) && !Role.SELLER.name().equals(updaterRole)) {
+                return Mono.error(new InvalidUserDataException(Constant.UNAUTHORIZED_OPERATION));
+            }
+        }
+        
+        // Only ADMIN can update SELLER or ADMIN users
+        if (existingUser.getRole() == Role.SELLER || existingUser.getRole() == Role.ADMIN) {
+            if (!Role.ADMIN.name().equals(updaterRole)) {
+                return Mono.error(new InvalidUserDataException(Constant.UNAUTHORIZED_OPERATION));
+            }
+        }
+        
+        return Mono.empty();
     }
     
     private User encryptPassword(User user) {

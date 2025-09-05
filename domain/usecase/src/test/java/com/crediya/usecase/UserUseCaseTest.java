@@ -566,7 +566,7 @@ class UserUseCaseTest {
                 null, "Juan Updated", "Pérez Updated", "99999999999", LocalDate.now(),
                 "New Address", "987654321", "juan.updated@email.com", "newPassword",
                 new BigDecimal("3000000"), Role.ADMIN, UserStatus.ACTIVE
-            )))
+            ), "ADMIN"))
                 .expectNext(updatedUser)
                 .verifyComplete();
         }
@@ -581,7 +581,7 @@ class UserUseCaseTest {
             when(userPersistencePort.update(any(User.class))).thenReturn(Mono.just(existingUser));
 
             // When & Then
-            StepVerifier.create(userUseCase.updateUser(1L, validUser))
+            StepVerifier.create(userUseCase.updateUser(1L, validUser, "ADMIN"))
                 .expectNext(existingUser)
                 .verifyComplete();
         }
@@ -590,7 +590,7 @@ class UserUseCaseTest {
         @DisplayName("Should throw InvalidUserDataException when id is null")
         void shouldThrowExceptionWhenIdIsNullForUpdate() {
             // When & Then
-            StepVerifier.create(userUseCase.updateUser(null, validUser))
+            StepVerifier.create(userUseCase.updateUser(null, validUser, "ADMIN"))
                 .expectErrorMatches(ex -> ex instanceof InvalidUserDataException &&
                     ex.getMessage().equals(Constant.INVALID_ID))
                 .verify();
@@ -603,7 +603,7 @@ class UserUseCaseTest {
             when(userPersistencePort.findById(anyLong())).thenReturn(Mono.empty());
 
             // When & Then
-            StepVerifier.create(userUseCase.updateUser(999L, validUser))
+            StepVerifier.create(userUseCase.updateUser(999L, validUser, "ADMIN"))
                 .expectError(UserNotFoundException.class)
                 .verify();
         }
@@ -622,7 +622,7 @@ class UserUseCaseTest {
             when(userPersistencePort.findByEmail("juan.perez@email.com")).thenReturn(Mono.just(anotherUser));
 
             // When & Then
-            StepVerifier.create(userUseCase.updateUser(1L, validUser))
+            StepVerifier.create(userUseCase.updateUser(1L, validUser, "ADMIN"))
                 .expectError(UserAlreadyExistsException.class)
                 .verify();
         }
@@ -642,7 +642,7 @@ class UserUseCaseTest {
             when(userPersistencePort.update(any(User.class))).thenReturn(Mono.just(userWithNullDocumentId));
 
             // When & Then
-            StepVerifier.create(userUseCase.updateUser(1L, userWithNullDocumentId))
+            StepVerifier.create(userUseCase.updateUser(1L, userWithNullDocumentId, "ADMIN"))
                 .expectNext(userWithNullDocumentId)
                 .verifyComplete();
         }
@@ -662,9 +662,150 @@ class UserUseCaseTest {
             when(userPersistencePort.findByDocumentId("12345678901")).thenReturn(Mono.just(anotherUser));
 
             // When & Then
-            StepVerifier.create(userUseCase.updateUser(1L, validUser))
+            StepVerifier.create(userUseCase.updateUser(1L, validUser, "ADMIN"))
                 .expectError(UserAlreadyExistsException.class)
                 .verify();
+        }
+
+        @Test
+        @DisplayName("Should allow ADMIN to update CLIENT user")
+        void shouldAllowAdminToUpdateClientUser() {
+            // Given
+            User clientUser = new User(
+                1L, "Juan", "Pérez", "12345678901", LocalDate.now(),
+                "Address", "123456789", "juan.perez@email.com", "password",
+                new BigDecimal("2000000"), Role.CLIENT, UserStatus.ACTIVE
+            );
+            
+            when(userPersistencePort.findById(1L)).thenReturn(Mono.just(clientUser));
+            when(userPersistencePort.findByEmail("juan.perez@email.com")).thenReturn(Mono.just(clientUser));
+            when(userPersistencePort.findByDocumentId("12345678901")).thenReturn(Mono.just(clientUser));
+            when(userPersistencePort.update(any(User.class))).thenReturn(Mono.just(clientUser));
+
+            // When & Then
+            StepVerifier.create(userUseCase.updateUser(1L, validUser, "ADMIN"))
+                .expectNext(clientUser)
+                .verifyComplete();
+        }
+
+        @Test
+        @DisplayName("Should allow SELLER to update CLIENT user")
+        void shouldAllowSellerToUpdateClientUser() {
+            // Given
+            User clientUser = new User(
+                1L, "Juan", "Pérez", "12345678901", LocalDate.now(),
+                "Address", "123456789", "juan.perez@email.com", "password",
+                new BigDecimal("2000000"), Role.CLIENT, UserStatus.ACTIVE
+            );
+            
+            when(userPersistencePort.findById(1L)).thenReturn(Mono.just(clientUser));
+            when(userPersistencePort.findByEmail("juan.perez@email.com")).thenReturn(Mono.just(clientUser));
+            when(userPersistencePort.findByDocumentId("12345678901")).thenReturn(Mono.just(clientUser));
+            when(userPersistencePort.update(any(User.class))).thenReturn(Mono.just(clientUser));
+
+            // When & Then
+            StepVerifier.create(userUseCase.updateUser(1L, validUser, "SELLER"))
+                .expectNext(clientUser)
+                .verifyComplete();
+        }
+
+        @Test
+        @DisplayName("Should deny CLIENT to update any user")
+        void shouldDenyClientToUpdateUser() {
+            // Given
+            User clientUser = new User(
+                1L, "Juan", "Pérez", "12345678901", LocalDate.now(),
+                "Address", "123456789", "juan.perez@email.com", "password",
+                new BigDecimal("2000000"), Role.CLIENT, UserStatus.ACTIVE
+            );
+            
+            when(userPersistencePort.findById(1L)).thenReturn(Mono.just(clientUser));
+
+            // When & Then
+            StepVerifier.create(userUseCase.updateUser(1L, validUser, "CLIENT"))
+                .expectErrorMatches(ex -> ex instanceof InvalidUserDataException &&
+                    ex.getMessage().equals(Constant.UNAUTHORIZED_OPERATION))
+                .verify();
+        }
+
+        @Test
+        @DisplayName("Should deny SELLER to update SELLER user")
+        void shouldDenySellerToUpdateSellerUser() {
+            // Given
+            User sellerUser = new User(
+                1L, "Juan", "Pérez", "12345678901", LocalDate.now(),
+                "Address", "123456789", "juan.perez@email.com", "password",
+                new BigDecimal("2000000"), Role.SELLER, UserStatus.ACTIVE
+            );
+            
+            when(userPersistencePort.findById(1L)).thenReturn(Mono.just(sellerUser));
+
+            // When & Then
+            StepVerifier.create(userUseCase.updateUser(1L, validUser, "SELLER"))
+                .expectErrorMatches(ex -> ex instanceof InvalidUserDataException &&
+                    ex.getMessage().equals(Constant.UNAUTHORIZED_OPERATION))
+                .verify();
+        }
+
+        @Test
+        @DisplayName("Should deny SELLER to update ADMIN user")
+        void shouldDenySellerToUpdateAdminUser() {
+            // Given
+            User adminUser = new User(
+                1L, "Juan", "Pérez", "12345678901", LocalDate.now(),
+                "Address", "123456789", "juan.perez@email.com", "password",
+                new BigDecimal("2000000"), Role.ADMIN, UserStatus.ACTIVE
+            );
+            
+            when(userPersistencePort.findById(1L)).thenReturn(Mono.just(adminUser));
+
+            // When & Then
+            StepVerifier.create(userUseCase.updateUser(1L, validUser, "SELLER"))
+                .expectErrorMatches(ex -> ex instanceof InvalidUserDataException &&
+                    ex.getMessage().equals(Constant.UNAUTHORIZED_OPERATION))
+                .verify();
+        }
+
+        @Test
+        @DisplayName("Should allow ADMIN to update SELLER user")
+        void shouldAllowAdminToUpdateSellerUser() {
+            // Given
+            User sellerUser = new User(
+                1L, "Juan", "Pérez", "12345678901", LocalDate.now(),
+                "Address", "123456789", "juan.perez@email.com", "password",
+                new BigDecimal("2000000"), Role.SELLER, UserStatus.ACTIVE
+            );
+            
+            when(userPersistencePort.findById(1L)).thenReturn(Mono.just(sellerUser));
+            when(userPersistencePort.findByEmail("juan.perez@email.com")).thenReturn(Mono.just(sellerUser));
+            when(userPersistencePort.findByDocumentId("12345678901")).thenReturn(Mono.just(sellerUser));
+            when(userPersistencePort.update(any(User.class))).thenReturn(Mono.just(sellerUser));
+
+            // When & Then
+            StepVerifier.create(userUseCase.updateUser(1L, validUser, "ADMIN"))
+                .expectNext(sellerUser)
+                .verifyComplete();
+        }
+
+        @Test
+        @DisplayName("Should allow ADMIN to update ADMIN user")
+        void shouldAllowAdminToUpdateAdminUser() {
+            // Given
+            User adminUser = new User(
+                1L, "Juan", "Pérez", "12345678901", LocalDate.now(),
+                "Address", "123456789", "juan.perez@email.com", "password",
+                new BigDecimal("2000000"), Role.ADMIN, UserStatus.ACTIVE
+            );
+            
+            when(userPersistencePort.findById(1L)).thenReturn(Mono.just(adminUser));
+            when(userPersistencePort.findByEmail("juan.perez@email.com")).thenReturn(Mono.just(adminUser));
+            when(userPersistencePort.findByDocumentId("12345678901")).thenReturn(Mono.just(adminUser));
+            when(userPersistencePort.update(any(User.class))).thenReturn(Mono.just(adminUser));
+
+            // When & Then
+            StepVerifier.create(userUseCase.updateUser(1L, validUser, "ADMIN"))
+                .expectNext(adminUser)
+                .verifyComplete();
         }
     }
 

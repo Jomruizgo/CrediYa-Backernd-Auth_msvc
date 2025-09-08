@@ -82,7 +82,7 @@ class AuthenticationUseCaseTest {
         @DisplayName("Should authenticate successfully with valid credentials")
         void shouldAuthenticateSuccessfullyWithValidCredentials() {
             // Given
-            when(userService.findByEmail("juan.perez@email.com")).thenReturn(Mono.just(activeUser));
+            when(userService.findByEmailInternal("juan.perez@email.com")).thenReturn(Mono.just(activeUser));
             when(passwordEncoder.matches("password123", "encodedPassword")).thenReturn(true);
             when(tokenProvider.generateAccessToken(any(User.class))).thenReturn(accessToken);
             when(tokenProvider.generateRefreshToken(any(User.class))).thenReturn(refreshToken);
@@ -100,7 +100,7 @@ class AuthenticationUseCaseTest {
         @DisplayName("Should normalize email to lowercase and trim")
         void shouldNormalizeEmailToLowercaseAndTrim() {
             // Given
-            when(userService.findByEmail("juan.perez@email.com")).thenReturn(Mono.just(activeUser));
+            when(userService.findByEmailInternal("juan.perez@email.com")).thenReturn(Mono.just(activeUser));
             when(passwordEncoder.matches("password123", "encodedPassword")).thenReturn(true);
             when(tokenProvider.generateAccessToken(any(User.class))).thenReturn(accessToken);
             when(tokenProvider.generateRefreshToken(any(User.class))).thenReturn(refreshToken);
@@ -155,7 +155,7 @@ class AuthenticationUseCaseTest {
         @DisplayName("Should throw exception when user not found")
         void shouldThrowExceptionWhenUserNotFound() {
             // Given
-            when(userService.findByEmail(anyString())).thenReturn(Mono.error(new UserNotFoundException("user@email.com")));
+            when(userService.findByEmailInternal(anyString())).thenReturn(Mono.error(new UserNotFoundException("user@email.com")));
 
             // When & Then
             StepVerifier.create(authenticationUseCase.authenticate("notfound@email.com", "password123"))
@@ -167,7 +167,7 @@ class AuthenticationUseCaseTest {
         @DisplayName("Should throw exception when user cannot login (PENDING status)")
         void shouldThrowExceptionWhenUserCannotLogin() {
             // Given
-            when(userService.findByEmail("maria.garcia@email.com")).thenReturn(Mono.just(pendingUser));
+            when(userService.findByEmailInternal("maria.garcia@email.com")).thenReturn(Mono.just(pendingUser));
 
             // When & Then
             StepVerifier.create(authenticationUseCase.authenticate("maria.garcia@email.com", "password123"))
@@ -180,7 +180,7 @@ class AuthenticationUseCaseTest {
         @DisplayName("Should throw exception when password does not match")
         void shouldThrowExceptionWhenPasswordDoesNotMatch() {
             // Given
-            when(userService.findByEmail("juan.perez@email.com")).thenReturn(Mono.just(activeUser));
+            when(userService.findByEmailInternal("juan.perez@email.com")).thenReturn(Mono.just(activeUser));
             when(passwordEncoder.matches("wrongpassword", "encodedPassword")).thenReturn(false);
 
             // When & Then
@@ -202,7 +202,7 @@ class AuthenticationUseCaseTest {
             String validRefreshToken = "valid.refresh.token";
             when(tokenProvider.validateToken(validRefreshToken)).thenReturn(true);
             when(tokenProvider.extractUsername(validRefreshToken)).thenReturn("juan.perez@email.com");
-            when(userService.findByEmail("juan.perez@email.com")).thenReturn(Mono.just(activeUser));
+            when(userService.findByEmailInternal("juan.perez@email.com")).thenReturn(Mono.just(activeUser));
             when(tokenProvider.generateAccessToken(any(User.class))).thenReturn(accessToken);
             when(tokenProvider.generateRefreshToken(any(User.class))).thenReturn(refreshToken);
 
@@ -256,7 +256,7 @@ class AuthenticationUseCaseTest {
             String validRefreshToken = "valid.refresh.token";
             when(tokenProvider.validateToken(validRefreshToken)).thenReturn(true);
             when(tokenProvider.extractUsername(validRefreshToken)).thenReturn("notfound@email.com");
-            when(userService.findByEmail("notfound@email.com")).thenReturn(Mono.error(new UserNotFoundException("notfound@email.com")));
+            when(userService.findByEmailInternal("notfound@email.com")).thenReturn(Mono.error(new UserNotFoundException("notfound@email.com")));
 
             // When & Then
             StepVerifier.create(authenticationUseCase.refreshToken(validRefreshToken))

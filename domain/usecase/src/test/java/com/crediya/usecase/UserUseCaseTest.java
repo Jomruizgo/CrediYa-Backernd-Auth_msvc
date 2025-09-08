@@ -1,5 +1,6 @@
 package com.crediya.usecase;
 
+import com.crediya.exception.AccessDeniedException;
 import com.crediya.exception.InvalidUserDataException;
 import com.crediya.exception.UserAlreadyExistsException;
 import com.crediya.exception.UserNotFoundException;
@@ -26,6 +27,8 @@ import java.time.LocalDate;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -391,6 +394,65 @@ class UserUseCaseTest {
                     ex.getMessage().contains("Document ID 12345678901 is already registered"))
                 .verify();
         }
+
+        @Test
+        @DisplayName("Should encrypt password when user has credentials")
+        void shouldEncryptPasswordWhenUserHasCredentials() {
+            // Given
+            User userWithPassword = new User(
+                null, "Juan", "Pérez", "12345678901", LocalDate.of(1990, 1, 1),
+                "Address", "123", "juan.perez@email.com", "plainPassword",
+                new BigDecimal("2000000"), Role.CLIENT, UserStatus.ACTIVE
+            );
+            
+            User expectedEncryptedUser = new User(
+                1L, "Juan", "Pérez", "12345678901", LocalDate.of(1990, 1, 1),
+                "Address", "123", "juan.perez@email.com", "encryptedPassword",
+                new BigDecimal("2000000"), Role.CLIENT, UserStatus.ACTIVE
+            );
+            
+            when(userPersistencePort.findByEmail(anyString())).thenReturn(Mono.empty());
+            when(userPersistencePort.findByDocumentId(anyString())).thenReturn(Mono.empty());
+            when(passwordEncoder.encode("plainPassword")).thenReturn("encryptedPassword");
+            when(userPersistencePort.save(any(User.class))).thenReturn(Mono.just(expectedEncryptedUser));
+
+            // When & Then
+            StepVerifier.create(userUseCase.saveUser(userWithPassword, "ADMIN"))
+                .expectNext(expectedEncryptedUser)
+                .verifyComplete();
+            
+            // Verify password was encrypted
+            verify(passwordEncoder).encode("plainPassword");
+        }
+
+        @Test
+        @DisplayName("Should not encrypt password when user has no credentials")
+        void shouldNotEncryptPasswordWhenUserHasNoCredentials() {
+            // Given
+            User userWithoutPassword = new User(
+                null, "Maria", "Garcia", "09876543210", LocalDate.of(1985, 5, 15),
+                "Address", "456", "maria.garcia@email.com", null,
+                new BigDecimal("3000000"), Role.CLIENT, UserStatus.PENDING
+            );
+            
+            User savedUserWithoutPassword = new User(
+                1L, "Maria", "Garcia", "09876543210", LocalDate.of(1985, 5, 15),
+                "Address", "456", "maria.garcia@email.com", null,
+                new BigDecimal("3000000"), Role.CLIENT, UserStatus.PENDING
+            );
+            
+            when(userPersistencePort.findByEmail(anyString())).thenReturn(Mono.empty());
+            when(userPersistencePort.findByDocumentId(anyString())).thenReturn(Mono.empty());
+            when(userPersistencePort.save(any(User.class))).thenReturn(Mono.just(savedUserWithoutPassword));
+
+            // When & Then
+            StepVerifier.create(userUseCase.saveUser(userWithoutPassword, "ADMIN"))
+                .expectNext(savedUserWithoutPassword)
+                .verifyComplete();
+            
+            // Verify password encoder was never called
+            verify(passwordEncoder, never()).encode(anyString());
+        }
     }
 
     @Nested
@@ -404,7 +466,7 @@ class UserUseCaseTest {
             when(userPersistencePort.findById(1L)).thenReturn(Mono.just(existingUser));
 
             // When & Then
-            StepVerifier.create(userUseCase.findById(1L))
+            StepVerifier.create(userUseCase.findByIdInternal(1L))
                 .expectNext(existingUser)
                 .verifyComplete();
         }
@@ -413,7 +475,7 @@ class UserUseCaseTest {
         @DisplayName("Should throw InvalidUserDataException when id is null")
         void shouldThrowExceptionWhenIdIsNull() {
             // When & Then
-            StepVerifier.create(userUseCase.findById(null))
+            StepVerifier.create(userUseCase.findByIdInternal(null))
                 .expectErrorMatches(ex -> ex instanceof InvalidUserDataException &&
                     ex.getMessage().equals(Constant.INVALID_ID))
                 .verify();
@@ -426,7 +488,7 @@ class UserUseCaseTest {
             when(userPersistencePort.findById(1L)).thenReturn(Mono.empty());
 
             // When & Then
-            StepVerifier.create(userUseCase.findById(1L))
+            StepVerifier.create(userUseCase.findByIdInternal(1L))
                 .expectError(UserNotFoundException.class)
                 .verify();
         }
@@ -443,7 +505,7 @@ class UserUseCaseTest {
             when(userPersistencePort.findByEmail("juan.perez@email.com")).thenReturn(Mono.just(existingUser));
 
             // When & Then
-            StepVerifier.create(userUseCase.findByEmail("juan.perez@email.com"))
+            StepVerifier.create(userUseCase.findByEmailInternal("juan.perez@email.com"))
                 .expectNext(existingUser)
                 .verifyComplete();
         }
@@ -455,7 +517,7 @@ class UserUseCaseTest {
             when(userPersistencePort.findByEmail("juan.perez@email.com")).thenReturn(Mono.just(existingUser));
 
             // When & Then
-            StepVerifier.create(userUseCase.findByEmail("  Juan.Perez@EMAIL.COM  "))
+            StepVerifier.create(userUseCase.findByEmailInternal("  Juan.Perez@EMAIL.COM  "))
                 .expectNext(existingUser)
                 .verifyComplete();
         }
@@ -464,7 +526,7 @@ class UserUseCaseTest {
         @DisplayName("Should throw InvalidUserDataException when email is null")
         void shouldThrowExceptionWhenEmailIsNull() {
             // When & Then
-            StepVerifier.create(userUseCase.findByEmail(null))
+            StepVerifier.create(userUseCase.findByEmailInternal(null))
                 .expectErrorMatches(ex -> ex instanceof InvalidUserDataException &&
                     ex.getMessage().equals(Constant.INVALID_EMAIL))
                 .verify();
@@ -474,7 +536,7 @@ class UserUseCaseTest {
         @DisplayName("Should throw InvalidUserDataException when email is empty")
         void shouldThrowExceptionWhenEmailIsEmpty() {
             // When & Then
-            StepVerifier.create(userUseCase.findByEmail("   "))
+            StepVerifier.create(userUseCase.findByEmailInternal("   "))
                 .expectErrorMatches(ex -> ex instanceof InvalidUserDataException &&
                     ex.getMessage().equals(Constant.INVALID_EMAIL))
                 .verify();
@@ -487,7 +549,7 @@ class UserUseCaseTest {
             when(userPersistencePort.findByEmail(anyString())).thenReturn(Mono.empty());
 
             // When & Then
-            StepVerifier.create(userUseCase.findByEmail("notfound@email.com"))
+            StepVerifier.create(userUseCase.findByEmailInternal("notfound@email.com"))
                 .expectError(UserNotFoundException.class)
                 .verify();
         }
@@ -863,7 +925,7 @@ class UserUseCaseTest {
             when(userPersistencePort.findAll()).thenReturn(Flux.just(user1, user2));
 
             // When & Then
-            StepVerifier.create(userUseCase.findAllUsers())
+            StepVerifier.create(userUseCase.findAllUsers(1L, "ADMIN"))
                 .expectNext(user1)
                 .expectNext(user2)
                 .verifyComplete();
@@ -876,8 +938,148 @@ class UserUseCaseTest {
             when(userPersistencePort.findAll()).thenReturn(Flux.empty());
 
             // When & Then
-            StepVerifier.create(userUseCase.findAllUsers())
+            StepVerifier.create(userUseCase.findAllUsers(1L, "ADMIN"))
                 .verifyComplete();
+        }
+    }
+
+    @Nested
+    @DisplayName("Authorization Tests")
+    class AuthorizationTests {
+
+        @Nested
+        @DisplayName("FindById Authorization Tests")
+        class FindByIdAuthorizationTests {
+
+            @Test
+            @DisplayName("Should allow ADMIN to access any user")
+            void shouldAllowAdminToAccessAnyUser() {
+                // Given
+                when(userPersistencePort.findById(1L)).thenReturn(Mono.just(existingUser));
+
+                // When & Then
+                StepVerifier.create(userUseCase.findById(1L, 2L, "ADMIN"))
+                    .expectNext(existingUser)
+                    .verifyComplete();
+            }
+
+            @Test
+            @DisplayName("Should allow SELLER to access any user")
+            void shouldAllowSellerToAccessAnyUser() {
+                // Given
+                when(userPersistencePort.findById(1L)).thenReturn(Mono.just(existingUser));
+
+                // When & Then
+                StepVerifier.create(userUseCase.findById(1L, 2L, "SELLER"))
+                    .expectNext(existingUser)
+                    .verifyComplete();
+            }
+
+            @Test
+            @DisplayName("Should allow CLIENT to access own user")
+            void shouldAllowClientToAccessOwnUser() {
+                // Given
+                when(userPersistencePort.findById(1L)).thenReturn(Mono.just(existingUser));
+
+                // When & Then
+                StepVerifier.create(userUseCase.findById(1L, 1L, "CLIENT"))
+                    .expectNext(existingUser)
+                    .verifyComplete();
+            }
+
+            @Test
+            @DisplayName("Should deny CLIENT access to other user")
+            void shouldDenyClientAccessToOtherUser() {
+                // When & Then
+                StepVerifier.create(userUseCase.findById(2L, 1L, "CLIENT"))
+                    .expectError(AccessDeniedException.class)
+                    .verify();
+            }
+
+            @Test
+            @DisplayName("Should deny access for invalid role")
+            void shouldDenyAccessForInvalidRole() {
+                // When & Then
+                StepVerifier.create(userUseCase.findById(1L, 1L, "INVALID"))
+                    .expectError(AccessDeniedException.class)
+                    .verify();
+            }
+        }
+
+        @Nested
+        @DisplayName("FindByEmail Authorization Tests")
+        class FindByEmailAuthorizationTests {
+
+            @Test
+            @DisplayName("Should allow ADMIN to search by email")
+            void shouldAllowAdminToSearchByEmail() {
+                // Given
+                when(userPersistencePort.findByEmail("test@email.com")).thenReturn(Mono.just(existingUser));
+
+                // When & Then
+                StepVerifier.create(userUseCase.findByEmail("test@email.com", 1L, "ADMIN"))
+                    .expectNext(existingUser)
+                    .verifyComplete();
+            }
+
+            @Test
+            @DisplayName("Should allow SELLER to search by email")
+            void shouldAllowSellerToSearchByEmail() {
+                // Given
+                when(userPersistencePort.findByEmail("test@email.com")).thenReturn(Mono.just(existingUser));
+
+                // When & Then
+                StepVerifier.create(userUseCase.findByEmail("test@email.com", 1L, "SELLER"))
+                    .expectNext(existingUser)
+                    .verifyComplete();
+            }
+
+            @Test
+            @DisplayName("Should deny CLIENT to search by email")
+            void shouldDenyClientToSearchByEmail() {
+                // When & Then
+                StepVerifier.create(userUseCase.findByEmail("test@email.com", 1L, "CLIENT"))
+                    .expectError(AccessDeniedException.class)
+                    .verify();
+            }
+        }
+
+        @Nested
+        @DisplayName("FindAllUsers Authorization Tests")
+        class FindAllUsersAuthorizationTests {
+
+            @Test
+            @DisplayName("Should allow ADMIN to list all users")
+            void shouldAllowAdminToListAllUsers() {
+                // Given
+                when(userPersistencePort.findAll()).thenReturn(Flux.just(existingUser));
+
+                // When & Then
+                StepVerifier.create(userUseCase.findAllUsers(1L, "ADMIN"))
+                    .expectNext(existingUser)
+                    .verifyComplete();
+            }
+
+            @Test
+            @DisplayName("Should allow SELLER to list all users")
+            void shouldAllowSellerToListAllUsers() {
+                // Given
+                when(userPersistencePort.findAll()).thenReturn(Flux.just(existingUser));
+
+                // When & Then
+                StepVerifier.create(userUseCase.findAllUsers(1L, "SELLER"))
+                    .expectNext(existingUser)
+                    .verifyComplete();
+            }
+
+            @Test
+            @DisplayName("Should deny CLIENT to list all users")
+            void shouldDenyClientToListAllUsers() {
+                // When & Then
+                StepVerifier.create(userUseCase.findAllUsers(1L, "CLIENT"))
+                    .expectError(AccessDeniedException.class)
+                    .verify();
+            }
         }
     }
 }

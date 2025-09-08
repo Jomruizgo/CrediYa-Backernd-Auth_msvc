@@ -7,6 +7,7 @@ public class ErrorConstants {
     public static final String NOT_FOUND = "NOT_FOUND";
     public static final String CONFLICT = "CONFLICT";
     public static final String UNAUTHORIZED = "UNAUTHORIZED";
+    public static final String ACCESS_DENIED = "ACCESS_DENIED";
     public static final String INTERNAL_ERROR = "INTERNAL_ERROR";
     
     // Error messages
@@ -20,6 +21,7 @@ public class ErrorConstants {
     public static final String LOG_VALIDATION_ERROR = "[CREDIYA-{}] Validation error: {} at {}";
     public static final String LOG_CONSTRAINT_VIOLATION = "[CREDIYA-{}] Constraint violation: {} at {}";
     public static final String LOG_UNEXPECTED_ERROR = "[CREDIYA-{}] Unexpected error occurred: {} at {}";
+    public static final String LOG_ACCESS_DENIED = "[CREDIYA-{}] Access denied: {}";
     public static final String VALIDATION_FAILED_PREFIX = "Validation failed: ";
     
     private ErrorConstants() {

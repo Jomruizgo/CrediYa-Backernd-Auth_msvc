@@ -18,33 +18,28 @@ public class Constant {
     public static final String USER_DOCUMENT_ALREADY_EXISTS = "Document ID %s is already registered by another user";
     public static final String USER_NOT_FOUND_BY_ID = "User with ID %s not found";
     public static final String USER_NOT_FOUND_BY_EMAIL = "User with email %s not found";
-    public static final String USER_NOT_FOUND_BY_DOCUMENT_ID = "User with document ID %s not found";
     public static final String INVALID_REQUIRED_FIELDS = "Name, lastName, email and baseSalary are required fields";
     public static final String INVALID_SALARY_RANGE = "Base salary must be between 0 and 15,000,000";
-    public static final String INVALID_EMAIL_DUPLICATE = "Email is already registered by another user";
-    public static final String INVALID_DOCUMENT_ID_DUPLICATE = "Document ID is already registered by another user";
     public static final String INVALID_USER_DATA = "Invalid user data";
     public static final String UNAUTHORIZED_OPERATION = "User does not have permission to perform this operation";
     public static final String INVALID_ID = "ID cannot be null";
     public static final String INVALID_EMAIL = "Email cannot be null or empty";
     public static final String INVALID_EMAIL_FORMAT = "Email must have a valid format";
-    public static final String INVALID_DOCUMENT_ID = "Document ID cannot be null or empty";
     public static final String UNAUTHORIZED_USER_CREATION = "Only ADMIN and SELLER roles can create users";
     public static final String UNAUTHORIZED_ADMIN_CREATION = "Only ADMIN can create SELLER or ADMIN users";
 
-    // Success Messages
-    public static final String USER_CREATED_SUCCESSFULLY = "User created successfully";
-    public static final String USER_UPDATED_SUCCESSFULLY = "User updated successfully";
-    public static final String USER_DELETED_SUCCESSFULLY = "User deleted successfully";
+
 
     // Authentication Messages
     public static final String INVALID_CREDENTIALS = "Invalid email or password";
-    public static final String INVALID_TOKEN = "Invalid or expired token";
-    public static final String TOKEN_EXPIRED = "Token has expired";
     public static final String INVALID_REFRESH_TOKEN = "Invalid refresh token";
-    public static final String AUTHENTICATION_FAILED = "Authentication failed";
-    public static final String INSUFFICIENT_PRIVILEGES = "Insufficient privileges to perform this operation";
-    public static final String TOKEN_REFRESHED_SUCCESSFULLY = "Token refreshed successfully";
+
+    
+    // Authorization Messages
+    public static final String ACCESS_DENIED_NOT_OWNER = "Access denied: You can only access your own user information";
+    public static final String ACCESS_DENIED_EMAIL_SEARCH = "Access denied: Clients cannot search users by email";
+    public static final String ACCESS_DENIED_LIST_ALL = "Access denied: Clients cannot list all users";
+    public static final String ACCESS_DENIED_INVALID_ROLE = "Access denied: Invalid role";
 
     // Authentication Log Messages
     public static final String AUTH_STARTED = "Authentication started for correlationId: {}";

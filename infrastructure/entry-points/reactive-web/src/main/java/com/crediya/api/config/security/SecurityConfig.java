@@ -21,7 +21,7 @@ public class SecurityConfig {
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
-                .cors(ServerHttpSecurity.CorsSpec::and)
+                .cors(cors -> {})
                 .authorizeExchange(exchanges -> 
                     exchanges
                         .pathMatchers(Constant.API_AUTH_PATH + "/**").permitAll()
@@ -31,8 +31,10 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.POST, Constant.API_USER_PATH).hasAnyRole("ADMIN", "SELLER")
                         .pathMatchers(HttpMethod.PUT, Constant.API_USER_PATH + "/**").hasAnyRole("ADMIN", "SELLER")
                         .pathMatchers(HttpMethod.DELETE, Constant.API_USER_PATH + "/**").hasRole("ADMIN")
-                        // User queries - All authenticated users can read
-                        .pathMatchers(HttpMethod.GET, Constant.API_USER_PATH + "/**").authenticated()
+                        // User queries - Granular permissions per endpoint
+                        .pathMatchers(HttpMethod.GET, Constant.API_USER_PATH + "/search").hasAnyRole("ADMIN", "SELLER") // GET /user/search?email= - Only ADMIN/SELLER
+                        .pathMatchers(HttpMethod.GET, Constant.API_USER_PATH + "/*").hasAnyRole("ADMIN", "SELLER", "CLIENT") // GET /user/{id} - UseCase validates ownership
+                        .pathMatchers(HttpMethod.GET, Constant.API_USER_PATH).hasAnyRole("ADMIN", "SELLER") // GET /user (list all) - Only ADMIN/SELLER
                         .anyExchange().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationWebFilter, SecurityWebFiltersOrder.AUTHENTICATION)

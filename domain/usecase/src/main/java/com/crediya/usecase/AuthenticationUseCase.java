@@ -33,7 +33,7 @@ public class AuthenticationUseCase implements IAuthenticationService {
         }
         
         return Mono.just(email.trim().toLowerCase())
-            .flatMap(userService::findByEmail)
+            .flatMap(userService::findByEmailInternal)
             .cast(User.class)
             .filter(User::canLogin)  // Check status ACTIVE + has credentials
             .filter(user -> passwordEncoder.matches(password, user.getPassword()))
@@ -55,7 +55,7 @@ public class AuthenticationUseCase implements IAuthenticationService {
         
         String username = tokenProvider.extractUsername(refreshToken);
         return Mono.just(username)
-            .flatMap(userService::findByEmail)
+            .flatMap(userService::findByEmailInternal)
             .cast(User.class)
             .flatMap(this::generateTokensForUser)
             .onErrorMap(UserNotFoundException.class, 

@@ -57,12 +57,12 @@ public class JwtAuthenticationWebFilter implements WebFilter {
             String correlationId = exchange.getRequest().getHeaders().getFirst("X-Correlation-ID");
             try {
                 Long userIdLong = Long.valueOf(userId);
-                return userService.findById(userIdLong)
+                return userService.findByIdInternal(userIdLong)
                         .map(user -> {
                             List<SimpleGrantedAuthority> authorities = List.of(
                                     new SimpleGrantedAuthority(SecurityMessages.ROLE_PREFIX + user.getRole().name())
                             );
-                            return new UsernamePasswordAuthenticationToken(user.getEmail(), null, authorities);
+                            return new UsernamePasswordAuthenticationToken(userId, null, authorities);
                         })
                         .cast(UsernamePasswordAuthenticationToken.class)
                         .contextWrite(ctx -> ctx.put("correlationId", correlationId));

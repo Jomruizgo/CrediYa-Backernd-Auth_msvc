@@ -1,6 +1,7 @@
 package com.crediya.api.exception;
 
 import com.crediya.api.util.CorrelationIdUtil;
+import com.crediya.exception.AccessDeniedException;
 import com.crediya.exception.InvalidCredentialsException;
 import com.crediya.exception.InvalidUserDataException;
 import com.crediya.exception.UserAlreadyExistsException;
@@ -80,6 +81,20 @@ public class GlobalExceptionHandler {
         );
         
         return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse));
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public Mono<ResponseEntity<ExceptionResponse>> handleAccessDeniedException(AccessDeniedException ex, ServerWebExchange exchange) {
+        String correlationId = getCorrelationId(exchange);
+        logger.warn(ErrorConstants.LOG_ACCESS_DENIED, correlationId, ex.getMessage());
+        
+        ExceptionResponse errorResponse = new ExceptionResponse(
+            ex.getMessage(),
+            ErrorConstants.ACCESS_DENIED,
+            LocalDateTime.now()
+        );
+        
+        return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse));
     }
 
     @ExceptionHandler(WebExchangeBindException.class)

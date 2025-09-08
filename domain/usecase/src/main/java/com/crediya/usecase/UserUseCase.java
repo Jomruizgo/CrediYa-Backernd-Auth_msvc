@@ -1,5 +1,6 @@
 package com.crediya.usecase;
 
+import com.crediya.exception.AccessDeniedException;
 import com.crediya.exception.InvalidUserDataException;
 import com.crediya.exception.UserAlreadyExistsException;
 import com.crediya.exception.UserNotFoundException;
@@ -42,25 +43,28 @@ public class UserUseCase implements IUserService {
     }
 
     @Override
-    public Mono<User> findById(Long id) {
-        if (id == null) {
+    public Mono<User> findById(Long targetUserId, Long authenticatedUserId, String authenticatedUserRole) {
+        if (targetUserId == null) {
             return Mono.error(new InvalidUserDataException(Constant.INVALID_ID));
         }
-        return Mono.just(id)
+        
+        return validateOwnership(targetUserId, authenticatedUserId, authenticatedUserRole)
+                .then(Mono.just(targetUserId))
                 .flatMap(userPersistencePort::findById)
-                .switchIfEmpty(Mono.error(new UserNotFoundException(id)));
+                .switchIfEmpty(Mono.error(new UserNotFoundException(targetUserId)));
     }
 
     @Override
-    public Mono<User> findByEmail(String email) {
-        return Mono.fromSupplier(() -> {
-            if (email == null || email.trim().isEmpty()) {
-                throw new InvalidUserDataException(Constant.INVALID_EMAIL);
-            }
-            return email.trim().toLowerCase();
-        })
-        .flatMap(userPersistencePort::findByEmail)
-        .switchIfEmpty(Mono.error(new UserNotFoundException(email)));
+    public Mono<User> findByEmail(String email, Long authenticatedUserId, String authenticatedUserRole) {
+        return validateEmailSearchAccess(authenticatedUserRole)
+                .then(Mono.fromSupplier(() -> {
+                    if (email == null || email.trim().isEmpty()) {
+                        throw new InvalidUserDataException(Constant.INVALID_EMAIL);
+                    }
+                    return email.trim().toLowerCase();
+                }))
+                .flatMap(userPersistencePort::findByEmail)
+                .switchIfEmpty(Mono.error(new UserNotFoundException(email)));
     }
 
     @Override
@@ -121,8 +125,8 @@ public class UserUseCase implements IUserService {
     }
 
     @Override
-    public Flux<User> findAllUsers() {
-        return Mono.empty()
+    public Flux<User> findAllUsers(Long authenticatedUserId, String authenticatedUserRole) {
+        return validateListAllAccess(authenticatedUserRole)
                 .thenMany(userPersistencePort.findAll());
     }
 
@@ -243,6 +247,68 @@ public class UserUseCase implements IUserService {
         }
         
         return Mono.empty();
+    }
+    
+    private Mono<Void> validateOwnership(Long targetUserId, Long authenticatedUserId, String authenticatedUserRole) {
+        if ("ADMIN".equals(authenticatedUserRole) || "SELLER".equals(authenticatedUserRole)) {
+            return Mono.empty();
+        }
+        
+        if ("CLIENT".equals(authenticatedUserRole)) {
+            if (authenticatedUserId.equals(targetUserId)) {
+                return Mono.empty();
+            } else {
+                return Mono.error(new AccessDeniedException(Constant.ACCESS_DENIED_NOT_OWNER));
+            }
+        }
+        
+        return Mono.error(new AccessDeniedException(Constant.ACCESS_DENIED_INVALID_ROLE));
+    }
+    
+    private Mono<Void> validateEmailSearchAccess(String authenticatedUserRole) {
+        if ("ADMIN".equals(authenticatedUserRole) || "SELLER".equals(authenticatedUserRole)) {
+            return Mono.empty();
+        }
+        
+        if ("CLIENT".equals(authenticatedUserRole)) {
+            return Mono.error(new AccessDeniedException(Constant.ACCESS_DENIED_EMAIL_SEARCH));
+        }
+        
+        return Mono.error(new AccessDeniedException(Constant.ACCESS_DENIED_INVALID_ROLE));
+    }
+    
+    private Mono<Void> validateListAllAccess(String authenticatedUserRole) {
+        if ("ADMIN".equals(authenticatedUserRole) || "SELLER".equals(authenticatedUserRole)) {
+            return Mono.empty();
+        }
+        
+        if ("CLIENT".equals(authenticatedUserRole)) {
+            return Mono.error(new AccessDeniedException(Constant.ACCESS_DENIED_LIST_ALL));
+        }
+        
+        return Mono.error(new AccessDeniedException(Constant.ACCESS_DENIED_INVALID_ROLE));
+    }
+    
+    @Override
+    public Mono<User> findByEmailInternal(String email) {
+        return Mono.fromSupplier(() -> {
+            if (email == null || email.trim().isEmpty()) {
+                throw new InvalidUserDataException(Constant.INVALID_EMAIL);
+            }
+            return email.trim().toLowerCase();
+        })
+        .flatMap(userPersistencePort::findByEmail)
+        .switchIfEmpty(Mono.error(new UserNotFoundException(email)));
+    }
+    
+    @Override
+    public Mono<User> findByIdInternal(Long id) {
+        if (id == null) {
+            return Mono.error(new InvalidUserDataException(Constant.INVALID_ID));
+        }
+        return Mono.just(id)
+                .flatMap(userPersistencePort::findById)
+                .switchIfEmpty(Mono.error(new UserNotFoundException(id)));
     }
     
     private User encryptPassword(User user) {

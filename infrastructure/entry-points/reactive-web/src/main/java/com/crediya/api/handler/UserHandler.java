@@ -7,7 +7,9 @@ import com.crediya.api.mapper.UserRequestMapper;
 import com.crediya.api.mapper.UserResponseMapper;
 import com.crediya.api.util.CorrelationIdUtil;
 import com.crediya.api.util.LogMessages;
+import com.crediya.exception.AccessDeniedException;
 import com.crediya.servicePort.IUserService;
+import com.crediya.util.Constant;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -58,14 +60,21 @@ public class UserHandler extends UserApiDocs {
     public Mono<ServerResponse> getUserById(ServerRequest serverRequest) {
         return CorrelationIdUtil.getCorrelationId()
                 .flatMap(correlationId -> {
-                    Long userId = Long.valueOf(serverRequest.pathVariable("id"));
-                    log.info(LogMessages.USER_SEARCH_BY_ID_STARTED, correlationId, userId);
-                    return Mono.just(userId)
-                            .flatMap(userService::findById)
-                            .map(userResponseMapper::toDto)
-                            .doOnSuccess(user -> log.info(LogMessages.USER_SEARCH_BY_ID_SUCCESS, correlationId, user.id()))
-                            .doOnError(error -> log.error(LogMessages.USER_SEARCH_BY_ID_ERROR, correlationId, error))
-                            .flatMap(userDto -> ServerResponse.ok().bodyValue(userDto));
+                    Long targetUserId = Long.valueOf(serverRequest.pathVariable("id"));
+                    log.info(LogMessages.USER_SEARCH_BY_ID_STARTED, correlationId, targetUserId);
+                    
+                    return ReactiveSecurityContextHolder.getContext()
+                            .map(ctx -> ctx.getAuthentication())
+                            .flatMap(auth -> {
+                                Long authenticatedUserId = Long.valueOf(auth.getName());
+                                String role = auth.getAuthorities().iterator().next().getAuthority().replace("ROLE_", "");
+                                
+                                return userService.findById(targetUserId, authenticatedUserId, role)
+                                        .map(userResponseMapper::toDto)
+                                        .doOnSuccess(user -> log.info(LogMessages.USER_SEARCH_BY_ID_SUCCESS, correlationId, user.id()))
+                                        .doOnError(error -> log.error(LogMessages.USER_SEARCH_BY_ID_ERROR, correlationId, error))
+                                        .flatMap(userDto -> ServerResponse.ok().bodyValue(userDto));
+                            });
                 });
     }
 
@@ -74,12 +83,19 @@ public class UserHandler extends UserApiDocs {
                 .flatMap(correlationId -> {
                     String email = serverRequest.queryParam("email").orElse("");
                     log.info(LogMessages.USER_SEARCH_BY_EMAIL_STARTED, correlationId, email);
-                    return Mono.just(email)
-                            .flatMap(userService::findByEmail)
-                            .map(userResponseMapper::toDto)
-                            .doOnSuccess(user -> log.info(LogMessages.USER_SEARCH_BY_EMAIL_SUCCESS, correlationId, user.id()))
-                            .doOnError(error -> log.error(LogMessages.USER_SEARCH_BY_EMAIL_ERROR, correlationId, error))
-                            .flatMap(userDto -> ServerResponse.ok().bodyValue(userDto));
+                    
+                    return ReactiveSecurityContextHolder.getContext()
+                            .map(ctx -> ctx.getAuthentication())
+                            .flatMap(auth -> {
+                                Long authenticatedUserId = Long.valueOf(auth.getName());
+                                String role = auth.getAuthorities().iterator().next().getAuthority().replace("ROLE_", "");
+                                
+                                return userService.findByEmail(email, authenticatedUserId, role)
+                                        .map(userResponseMapper::toDto)
+                                        .doOnSuccess(user -> log.info(LogMessages.USER_SEARCH_BY_EMAIL_SUCCESS, correlationId, user.id()))
+                                        .doOnError(error -> log.error(LogMessages.USER_SEARCH_BY_EMAIL_ERROR, correlationId, error))
+                                        .flatMap(userDto -> ServerResponse.ok().bodyValue(userDto));
+                            });
                 });
     }
 
@@ -119,13 +135,20 @@ public class UserHandler extends UserApiDocs {
         return CorrelationIdUtil.getCorrelationId()
                 .flatMap(correlationId -> {
                     log.info(LogMessages.USER_LIST_ALL_STARTED, correlationId);
-                    return Mono.empty()
-                            .thenMany(userService.findAllUsers())
-                            .map(userResponseMapper::toDto)
-                            .collectList()
-                            .doOnSuccess(users -> log.info(LogMessages.USER_LIST_ALL_SUCCESS, correlationId, users.size()))
-                            .doOnError(error -> log.error(LogMessages.USER_LIST_ALL_ERROR, correlationId, error))
-                            .flatMap(users -> ServerResponse.ok().bodyValue(users));
+                    
+                    return ReactiveSecurityContextHolder.getContext()
+                            .map(ctx -> ctx.getAuthentication())
+                            .flatMap(auth -> {
+                                Long authenticatedUserId = Long.valueOf(auth.getName());
+                                String role = auth.getAuthorities().iterator().next().getAuthority().replace("ROLE_", "");
+                                
+                                return userService.findAllUsers(authenticatedUserId, role)
+                                        .map(userResponseMapper::toDto)
+                                        .collectList()
+                                        .doOnSuccess(users -> log.info(LogMessages.USER_LIST_ALL_SUCCESS, correlationId, users.size()))
+                                        .doOnError(error -> log.error(LogMessages.USER_LIST_ALL_ERROR, correlationId, error))
+                                        .flatMap(users -> ServerResponse.ok().bodyValue(users));
+                            });
                 });
     }
     
